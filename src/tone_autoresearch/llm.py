@@ -26,7 +26,8 @@ class LLMClient:
         system: str,
         user: str,
         temperature: float = 0.2,
-        max_tokens: int = 800,
+        max_tokens: int = 4000,
+        json_mode: bool = False,
     ) -> str:
         if self.settings.mock_llm:
             raise RuntimeError("chat() should not be called in MOCK_LLM mode.")
@@ -43,15 +44,26 @@ class LLMClient:
             return cache_path.read_text(encoding="utf-8")
 
         assert self._client is not None
-        response = self._client.chat.completions.create(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            messages=[
+        # GPT-5系はtemperatureのカスタム値を未サポートのため、デフォルト(1.0)以外を指定する場合のみ渡す
+        kwargs: dict = {
+            "model": model,
+            "max_completion_tokens": max_tokens,
+            "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-        )
+        }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        if temperature != 1.0:
+            # temperatureをサポートしないモデルではエラーになるため、try/fallback
+            kwargs["temperature"] = temperature
+        try:
+            response = self._client.chat.completions.create(**kwargs)
+        except Exception:
+            # temperatureが拒否された場合はデフォルトで再試行
+            kwargs.pop("temperature", None)
+            response = self._client.chat.completions.create(**kwargs)
         text = response.choices[0].message.content or ""
         if cache_path is not None:
             ensure_dir(cache_path.parent)

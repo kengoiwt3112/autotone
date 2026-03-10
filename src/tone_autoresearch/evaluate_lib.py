@@ -146,7 +146,9 @@ def generate_post(llm: LLMClient, model: str, rendered_prompt: str, target_lengt
         "Return only the final text, with no explanation."
     )
     user = rendered_prompt
-    max_tokens = max(160, min(600, target_length * 3))
+    # reasoningモデル(GPT-5等)はmax_completion_tokensにreasoning分も含むため余裕を持たせる
+    base_tokens = max(160, min(600, target_length * 3))
+    max_tokens = base_tokens + 2000
     text = llm.chat(model=model, system=system, user=user, temperature=0.3, max_tokens=max_tokens).strip()
     return strip_outer_quotes(text)
 
@@ -172,7 +174,7 @@ def judge_post(llm: LLMClient, model: str, row: dict[str, Any], generated_text: 
         "}\n"
         "High copy_risk means the generated text feels too close to the reference."
     )
-    raw = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=220)
+    raw = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=2500, json_mode=True)
     data = extract_json_object(raw)
     return normalize_judge(data)
 

@@ -91,7 +91,7 @@ def infer_topic_with_llm(llm: LLMClient, model: str, text: str, platform: str) -
         "Keep it concise and reusable as a writing prompt.\n\n"
         f"POST:\n{text}"
     )
-    topic = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=120).strip()
+    topic = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=2000).strip()
     return topic.splitlines()[0].strip() or infer_topic_heuristic(text)
 
 
@@ -105,7 +105,7 @@ def summarize_style_with_llm(llm: LLMClient, model: str, train: list[dict[str, A
         "Do not copy signature phrases. Use bullet points."
     )
     user = "Author posts:\n" + "\n".join(f"- {line}" for line in example_block)
-    text = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=400).strip()
+    text = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=2500).strip()
     return text
 
 

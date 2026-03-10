@@ -2,6 +2,7 @@
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
 .env
 .python-version
 
@@ -15,3 +16,7 @@ data/private/*.jsonl
 .cache/
 
 *.log
+
+# editor / tool configs
+.claude/
+.entire/

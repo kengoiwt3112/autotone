@@ -140,7 +140,7 @@ def propose_with_llm(
         "Rewrite the prompt template to improve tone matching on held-out examples. "
         "Keep it short and practical."
     )
-    proposal = llm.chat(model=model, system=system, user=user, temperature=0.7, max_tokens=900).strip()
+    proposal = llm.chat(model=model, system=system, user=user, temperature=0.7, max_tokens=4000).strip()
     return sanitize_candidate_prompt(proposal, current_prompt)
 
 

@@ -85,7 +85,19 @@ You can use:
 - a local OpenAI-compatible server
 - **Ollama**, via its OpenAI-compatible endpoint at `http://localhost:11434/v1`.
 
-Example local `.env` for Ollama:
+Example `.env` for OpenAI API (recommended):
+
+```bash
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_API_KEY=sk-your-api-key-here
+
+GENERATOR_MODEL=gpt-5-mini
+JUDGE_MODEL=gpt-5
+OPTIMIZER_MODEL=gpt-5
+PREP_MODEL=gpt-5-mini
+```
+
+Example `.env` for Ollama (local, free):
 
 ```bash
 OPENAI_BASE_URL=http://localhost:11434/v1
@@ -131,7 +143,7 @@ If `topic` is missing, `prepare.py` will infer one heuristically, or with `PREP_
 ### 5) Prepare the dataset
 
 ```bash
-uv run prepare.py
+uv run python prepare.py
 ```
 
 This creates:
@@ -147,7 +159,7 @@ Open `program.md` and adjust the rules if you want a different optimization beha
 ### 7) Run a baseline evaluation
 
 ```bash
-uv run evaluate.py --prompt prompts/working_prompt.md
+uv run python evaluate.py --prompt prompts/working_prompt.md
 ```
 
 Outputs:
@@ -158,7 +170,7 @@ Outputs:
 ### 8) Optimize the prompt
 
 ```bash
-uv run optimize.py --rounds 8
+uv run python optimize.py --rounds 8
 ```
 
 Best prompt is written to:
@@ -172,7 +184,7 @@ Each round is logged under `runs/`.
 ### 9) Generate a fresh post
 
 ```bash
-uv run generate.py --platform x --topic "why small evaluation loops beat big rewrites"
+uv run python generate.py --platform x --topic "why small evaluation loops beat big rewrites"
 ```
 
 ## Data tips
@@ -212,16 +224,16 @@ The goal is not to clone any one post, but to find a prompt that makes the model
 cp data/sample_raw_posts.jsonl data/private/raw_posts.jsonl
 
 # 2. prepare artifacts
-uv run prepare.py
+uv run python prepare.py
 
 # 3. baseline
-uv run evaluate.py --prompt prompts/working_prompt.md
+uv run python evaluate.py --prompt prompts/working_prompt.md
 
 # 4. optimize
-uv run optimize.py --rounds 6
+uv run python optimize.py --rounds 6
 
 # 5. generate a new post
-uv run generate.py --platform x --topic "why evals should be productized earlier"
+uv run python generate.py --platform x --topic "why evals should be productized earlier"
 ```
 
 ## Notes
@@ -230,6 +242,7 @@ uv run generate.py --platform x --topic "why evals should be productized earlier
 - It is best treated as an **iterative taste loop**.
 - The judge model matters a lot.
 - Local models are fine for cheap iteration, but a stronger judge usually gives better gradients for optimization.
+- **Reasoning models** (GPT-5, o-series, etc.) are supported. The LLM client automatically handles `max_completion_tokens` and `temperature` restrictions.
 - If your personal corpus is sensitive, keep `data/private/` out of version control and avoid uploading confidential Slack exports.
 
 ## License
