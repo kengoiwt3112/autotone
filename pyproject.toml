@@ -1,0 +1,17 @@
+[project]
+name = "autoresearch-tone-macos"
+version = "0.1.0"
+description = "A tiny, Mac-friendly autoresearch loop for optimizing prompts to match your writing tone."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "openai>=1.40.0",
+  "python-dotenv>=1.0.1",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

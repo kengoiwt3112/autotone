@@ -1,0 +1,17 @@
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+.env
+.python-version
+
+artifacts/*
+!artifacts/.gitkeep
+
+runs/*
+!runs/.gitkeep
+
+data/private/*.jsonl
+.cache/
+
+*.log
