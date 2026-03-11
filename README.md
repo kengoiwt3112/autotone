@@ -1,142 +1,102 @@
 # autotone
 
-An autonomous AI research system for **writing tone optimization**, built on the autoresearch pattern.
+The idea: give an AI agent a writing style corpus and let it experiment overnight. It modifies the prompt, generates text in your voice, checks if the result matches your tone, keeps or discards, and repeats. You wake up in the morning to a log of experiments and (hopefully) a prompt that writes like you. This is [autoresearch](https://github.com/karpathy/autoresearch) applied to **prompt optimization** instead of model training — same shape, different domain.
 
-## Acknowledgments
+## How it works
 
-This project is directly inspired by:
+The repo is deliberately kept small and only really has four files that matter:
 
-- [**karpathy/autoresearch**](https://github.com/karpathy/autoresearch) — the original autoresearch: an AI agent autonomously improves `train.py` overnight, training for fixed 5-minute budgets, evaluating via val_bpb, and keeping only improvements. One mutable file, one fixed metric, one keep/revert loop.
-- [**miolini/autoresearch-macos**](https://github.com/miolini/autoresearch-macos) — the same idea adapted for Apple Silicon Macs with MPS support.
+- **`prepare.py`** — one-time data prep (splits your posts into train/validation, builds a style profile, infers topics). Not modified.
+- **`evaluate.py`** — the fixed evaluator. Generates text from the prompt, scores it against your real writing style using LLM judges and local stylometrics. Not modified.
+- **`prompts/working_prompt.md`** — the single file the agent edits. Contains the full system prompt that tells the LLM how to write like you. **This file is edited and iterated on by the agent.**
+- **`program.md`** — instructions for the agent. Point Claude Code here and let it go. **This file is edited and iterated on by the human.**
 
-This repo applies the same **shape** — single mutable target, fixed evaluator, keep/revert cycle, and a human-written `program.md` — but swaps model training for **prompt optimization**. Instead of improving a training loop, the agent improves a prompt file so an LLM can better reproduce your writing tone.
+By design, each experiment runs for a **fixed 5-minute time budget**. The metric is **overall_score** — higher is better. It combines LLM judge assessments (style similarity, same-author likelihood) with local stylometric features (punctuation patterns, rhythm, compression) and an anti-copy penalty to prevent memorization.
 
-## Core concept
+## Quick start
 
-Give an AI agent (Claude Code) a writing style corpus and let it experiment overnight. The agent modifies the prompt, generates text, evaluates against your real writing style, and either keeps or discards each change before repeating the cycle.
-
-## Key files
-
-| File | Role | Modified by |
-|------|------|-------------|
-| `prepare.py` | One-time data prep (splits data, builds style profile) | Nobody |
-| `evaluate.py` | Fixed evaluator (generates text, scores against your style) | Nobody |
-| `prompts/working_prompt.md` | **The single file the agent edits** | Agent |
-| `program.md` | Research brief + experiment loop instructions | Human |
-
-## Requirements
-
-- Apple Silicon Mac (M1 and later) or any machine with Python 3.10+
-- [uv](https://github.com/astral-sh/uv) package manager
-- An OpenAI-compatible API endpoint (or Ollama for local inference)
-
-## Getting started
+**Requirements:** Python 3.10+, [uv](https://docs.astral.sh/uv/), an OpenAI-compatible API endpoint (or Ollama for local inference).
 
 ```bash
+# 1. Install uv (if you don't already have it)
 curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. Install dependencies
 uv sync
+
+# 3. Set up your API credentials
 cp .env.example .env
-```
+# Edit .env with your model backend
 
-### Configure a model backend
+# 4. Add your posts
+#    Put your writing samples in data/private/raw_posts.jsonl
+#    One JSON object per line, only "text" is required:
+#    {"text":"Your post goes here."}
 
-This repo uses the OpenAI Python client against any **OpenAI-compatible** endpoint.
-
-Example `.env` for OpenAI API:
-
-```bash
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_API_KEY=sk-your-api-key-here
-
-GENERATOR_MODEL=gpt-5-mini
-JUDGE_MODEL=gpt-5
-PREP_MODEL=gpt-5-mini
-```
-
-Example `.env` for Ollama (local, free):
-
-```bash
-OPENAI_BASE_URL=http://localhost:11434/v1
-OPENAI_API_KEY=ollama
-
-GENERATOR_MODEL=qwen2.5:14b
-JUDGE_MODEL=qwen2.5:14b
-PREP_MODEL=qwen2.5:14b
-```
-
-Smoke-test mode (no API needed): `MOCK_LLM=1`
-
-### Add your posts
-
-```text
-data/private/raw_posts.jsonl
-```
-
-One JSON object per line. Only `text` is required:
-
-```json
-{"text":"Small posts go here."}
-{"text":"Longer internal message goes here."}
-```
-
-`prepare.py` automatically infers topics and other metadata from your text.
-
-### Prepare and run
-
-```bash
+# 5. Prepare the dataset (one-time)
 uv run python prepare.py
+
+# 6. Run a single evaluation
 uv run python evaluate.py --prompt prompts/working_prompt.md
 ```
 
-### Start the optimization loop
+If the above commands all work ok, your setup is working and you can go into autonomous research mode.
 
-Point Claude Code at `program.md`:
+Smoke-test mode (no API needed): `MOCK_LLM=1`
+
+## Running the agent
+
+Simply spin up Claude Code in this repo, then prompt something like:
 
 ```
 Have a look at program.md and kick off a new experiment. Start with the setup.
 ```
 
-The agent then autonomously iterates — editing the prompt, evaluating, keeping improvements — in 5-minute experiment cycles until you stop it. Just like the original autoresearch, but for writing style instead of training loss.
+The agent then autonomously iterates — editing the prompt, evaluating, keeping improvements — in 5-minute experiment cycles until you stop it.
 
-### Generate a new post
+## Project structure
 
-```bash
-uv run python generate.py --topic "why small evaluation loops beat big rewrites"
+```
+prepare.py                  — data prep + style profiling (do not modify)
+evaluate.py                 — evaluator + scoring (do not modify)
+generate.py                 — generate a post from the optimized prompt
+prompts/working_prompt.md   — system prompt (agent modifies this)
+prompts/best_prompt.md      — best prompt so far (auto-updated)
+program.md                  — agent instructions
+src/autotone/               — library code (do not modify)
+data/private/raw_posts.jsonl — your writing samples (gitignored)
 ```
 
-## Scoring
+## Design choices
 
-The evaluator combines:
+- **Single file to modify.** The agent only touches `prompts/working_prompt.md`. This keeps the scope manageable and diffs reviewable.
+- **Fixed time budget.** Each experiment runs for 5 minutes. This means roughly 12 experiments/hour, ~100 experiments overnight. Results are directly comparable regardless of what the agent changes in the prompt.
+- **Self-contained.** No external dependencies beyond OpenAI client and dotenv. No fine-tuning, no embeddings, no vector databases. One prompt, one evaluator, one metric.
+- **Public-safe by default.** Ships with synthetic sample data only. Your real posts live under `data/private/` (gitignored). `.gitignore` excludes `.env`, generated artifacts, and run logs.
 
-- LLM judge scores (style similarity, same-author likelihood)
-- Local stylometric similarity (punctuation, rhythm, compression)
-- Length / structure similarity
-- Anti-copy penalty (prevents memorization)
+## Model backends
 
-The metric is `overall_score` — higher is better. The goal is not to clone any one post, but to find a prompt that makes the model feel like **the same writer** across unseen topics.
+This repo uses the OpenAI Python client against any **OpenAI-compatible** endpoint.
 
-## Public-safe by default
+| Backend | `OPENAI_BASE_URL` | Example models |
+|---------|-------------------|----------------|
+| OpenAI | `https://api.openai.com/v1` | gpt-5-mini, gpt-5 |
+| Ollama | `http://localhost:11434/v1` | qwen2.5:14b |
 
-- Ships with **synthetic sample data only**
-- Your real posts live under `data/private/` (gitignored)
-- `.gitignore` excludes `.env`, generated artifacts, and run logs
-
-Do **not** commit private content or personal exports into a public repository.
+Reasoning models (GPT-5, o-series, etc.) are supported. The LLM client automatically handles `max_completion_tokens` and `temperature` restrictions.
 
 ## Data tips
 
 For the first pass, use around **20–60 posts**.
 
+- Only `text` is required — topics and metadata are auto-generated
 - Remove URLs if they dominate your corpus
 - Remove repost boilerplate
 - Keep language consistent if possible
 
-## Notes
+## Acknowledgments
 
-- This is not a perfect authorship system. It is best treated as an **iterative taste loop**.
-- The judge model matters a lot. A stronger judge gives better gradients for optimization.
-- **Reasoning models** (GPT-5, o-series, etc.) are supported. The LLM client automatically handles `max_completion_tokens` and `temperature` restrictions.
-- If your personal corpus is sensitive, keep `data/private/` out of version control.
+This project is directly inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch) — an AI agent autonomously improves `train.py` overnight, and [miolini/autoresearch-macos](https://github.com/miolini/autoresearch-macos) — the same idea adapted for Apple Silicon. This repo applies the same shape (single mutable target, fixed evaluator, keep/revert cycle) but swaps model training for prompt optimization.
 
 ## License
 
