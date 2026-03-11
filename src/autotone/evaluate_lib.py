@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 import argparse
+import datetime
+import json
 from pathlib import Path
 from typing import Any
 
 from .data import load_dataset
 from .llm import LLMClient
-from .metrics import local_style_bundle
+from .metrics import local_style_bundle, topic_keyword_overlap
 from .settings import load_settings
 from .utils import (
     clamp,
+    ensure_dir,
     extract_json_object,
     mean,
     read_json,
     read_text,
     safe_float,
+    short_hash,
     write_json,
     write_text,
 )
@@ -58,9 +62,31 @@ def main() -> None:
     report_path = output_path.with_name("latest_report.md")
     write_text(report_path, build_markdown_report(result))
 
+    # エージェント向け構造化入力（生テキストを含まない安全な形式）
+    agent_input_path = output_path.with_name("latest_agent_input.json")
+    write_json(agent_input_path, build_agent_input(result))
+
+    # 実験ログの追記
+    experiment_log = project_root / "runs" / "experiments.jsonl"
+    prompt_text = read_text(prompt_path)
+    log_entry = {
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "prompt_hash": short_hash(prompt_text),
+        "prompt_path": str(prompt_path),
+        "split": result.get("split", "validation"),
+        "example_count": result.get("example_count", 0),
+        "overall_score": result.get("overall_score", 0.0),
+        "aggregate_metrics": result.get("aggregate_metrics", {}),
+    }
+    ensure_dir(experiment_log.parent)
+    with experiment_log.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
+
     print(f"Score: {result['overall_score']:.2f}")
     print(f"Wrote: {output_path}")
     print(f"Wrote: {report_path}")
+    print(f"Wrote: {agent_input_path}")
+    print(f"Wrote: {experiment_log}")
 
 
 def evaluate_prompt(
@@ -168,6 +194,7 @@ def judge_post(llm: LLMClient, model: str, row: dict[str, Any], generated_text: 
         "without copying it. Return JSON only."
     )
     user = (
+        f"Topic: {row['topic']}\n\n"
         f"Reference post:\n{row['reference_text']}\n\n"
         f"Generated post:\n{generated_text}\n\n"
         "Return JSON with keys:\n"
@@ -175,9 +202,11 @@ def judge_post(llm: LLMClient, model: str, row: dict[str, Any], generated_text: 
         '"style_similarity": 0-10, '
         '"same_author_likelihood": 0-10, '
         '"copy_risk": 0-10, '
+        '"topic_fidelity": 0-10, '
         '"comment": "short comment"'
         "}\n"
-        "High copy_risk means the generated text feels too close to the reference."
+        "High copy_risk means the generated text feels too close to the reference.\n"
+        "topic_fidelity measures how well the generated text addresses the given topic."
     )
     raw = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=2500, json_mode=True)
     data = extract_json_object(raw)
@@ -189,6 +218,7 @@ def normalize_judge(data: dict[str, Any]) -> dict[str, Any]:
         "style_similarity": clamp(safe_float(data.get("style_similarity"), 0.0), 0.0, 10.0),
         "same_author_likelihood": clamp(safe_float(data.get("same_author_likelihood"), 0.0), 0.0, 10.0),
         "copy_risk": clamp(safe_float(data.get("copy_risk"), 0.0), 0.0, 10.0),
+        "topic_fidelity": clamp(safe_float(data.get("topic_fidelity"), 5.0), 0.0, 10.0),
         "comment": str(data.get("comment", "")).strip(),
     }
 
@@ -197,10 +227,12 @@ def heuristic_judge(row: dict[str, Any], generated_text: str, local: dict[str, f
     style = 10.0 * (0.55 * local["profile_similarity"] + 0.45 * local["reference_similarity"])
     same_author = 10.0 * (0.65 * local["profile_similarity"] + 0.35 * (1.0 - local["copy_penalty"]))
     copy_risk = 10.0 * local["copy_penalty"]
+    topic_fid = 10.0 * topic_keyword_overlap(generated_text, row["topic"])
     return {
         "style_similarity": round(style, 2),
         "same_author_likelihood": round(same_author, 2),
         "copy_risk": round(copy_risk, 2),
+        "topic_fidelity": round(topic_fid, 2),
         "comment": "Heuristic fallback judge",
     }
 
@@ -209,10 +241,12 @@ def combine_scores(local: dict[str, float], judge: dict[str, Any]) -> float:
     judge_style = judge["style_similarity"] / 10.0
     judge_author = judge["same_author_likelihood"] / 10.0
     judge_copy = judge["copy_risk"] / 10.0
+    judge_topic = judge.get("topic_fidelity", 5.0) / 10.0
 
     score = (
-        0.40 * judge_style
-        + 0.20 * judge_author
+        0.35 * judge_style
+        + 0.15 * judge_author
+        + 0.10 * judge_topic
         + 0.20 * local["profile_similarity"]
         + 0.10 * local["reference_similarity"]
         + 0.10 * local["length_score"]
@@ -229,12 +263,14 @@ def aggregate_metrics(examples: list[dict[str, Any]]) -> dict[str, float]:
     copy_penalties = [ex["local_metrics"]["copy_penalty"] for ex in examples]
     judge_style = [ex["judge"]["style_similarity"] / 10.0 for ex in examples]
     judge_author = [ex["judge"]["same_author_likelihood"] / 10.0 for ex in examples]
+    judge_topic = [ex["judge"].get("topic_fidelity", 5.0) / 10.0 for ex in examples]
     return {
         "profile_similarity": round(mean(profile_scores), 4),
         "reference_similarity": round(mean(ref_scores), 4),
         "copy_penalty": round(mean(copy_penalties), 4),
         "judge_style_similarity": round(mean(judge_style), 4),
         "judge_same_author": round(mean(judge_author), 4),
+        "judge_topic_fidelity": round(mean(judge_topic), 4),
     }
 
 
@@ -288,6 +324,56 @@ def format_example_block(ex: dict[str, Any]) -> list[str]:
         ex["generated_text"],
         "",
     ]
+
+
+def build_agent_input(result: dict[str, Any]) -> dict[str, Any]:
+    """エージェントが読み取る構造化データ。生テキストは含まない。"""
+    examples_summary = []
+    for ex in result.get("examples", []):
+        # judge comment は間接プロンプトインジェクション防止のため切り詰め
+        judge_safe = {k: v for k, v in ex["judge"].items() if k != "comment"}
+        judge_safe["comment"] = str(ex["judge"].get("comment", ""))[:120]
+        examples_summary.append({
+            "id": ex["id"],
+            "topic": ex["topic"],
+            "target_length": ex["target_length"],
+            "generated_length": len(ex.get("generated_text", "")),
+            "sample_score": ex["sample_score"],
+            "local_metrics": ex["local_metrics"],
+            "judge": judge_safe,
+        })
+
+    return {
+        "prompt_path": result.get("prompt_path", ""),
+        "split": result.get("split", "validation"),
+        "example_count": result.get("example_count", 0),
+        "overall_score": result.get("overall_score", 0.0),
+        "aggregate_metrics": result.get("aggregate_metrics", {}),
+        "examples": examples_summary,
+        "hints": _generate_hints(result),
+    }
+
+
+def _generate_hints(result: dict[str, Any]) -> list[str]:
+    """スコアに基づいて改善ヒントを最大5つ生成する。"""
+    hints: list[str] = []
+    agg = result.get("aggregate_metrics", {})
+
+    if agg.get("copy_penalty", 0) > 0.15:
+        hints.append("copy_penalty が高い。アンチコピー指示を強化すべき。")
+    if agg.get("profile_similarity", 1) < 0.6:
+        hints.append("profile_similarity が低い。スタイルプロファイルとの一致を改善すべき。")
+    if agg.get("judge_style_similarity", 1) < 0.6:
+        hints.append("judge_style_similarity が低い。文体の一貫性を改善すべき。")
+    if agg.get("judge_topic_fidelity", 1) < 0.6:
+        hints.append("topic_fidelity が低い。トピックへの忠実度を改善すべき。")
+
+    examples = sorted(result.get("examples", []), key=lambda x: x["sample_score"])
+    if examples and examples[0]["sample_score"] < 0.4:
+        worst = examples[0]
+        hints.append(f"最低スコア例 (id={worst['id']}, topic='{worst['topic']}'): score={worst['sample_score']:.2f}")
+
+    return hints[:5]
 
 
 def mock_generate(rendered_prompt: str, row: dict[str, Any]) -> str:

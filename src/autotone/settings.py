@@ -20,6 +20,7 @@ class Settings:
     train_ratio: float
     disable_llm_cache: bool
     mock_llm: bool
+    max_experiments: int | None
 
     @property
     def cache_dir(self) -> Path:
@@ -43,7 +44,20 @@ def load_settings(project_root: Path | None = None) -> Settings:
         train_ratio=float(os.getenv("TRAIN_RATIO", "0.7")),
         disable_llm_cache=os.getenv("DISABLE_LLM_CACHE", "0") == "1",
         mock_llm=os.getenv("MOCK_LLM", "0") == "1",
+        max_experiments=_int_or_none(os.getenv("MAX_EXPERIMENTS")),
     )
+
+
+def _int_or_none(value: str | None) -> int | None:
+    if value is None:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
 
 def _empty_to_none(value: str | None) -> str | None:

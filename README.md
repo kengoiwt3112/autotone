@@ -12,7 +12,7 @@ The repo is deliberately kept small and only really has four files that matter:
 - **`prompts/working_prompt.md`** — the single file the agent edits. Contains the full system prompt that tells the LLM how to write like you. **This file is edited and iterated on by the agent.** (gitignored)
 - **`program.md`** — instructions for the agent. Point Claude Code here and let it go. **This file is edited and iterated on by the human.**
 
-By design, each experiment runs for a **fixed 5-minute time budget**. The metric is **overall_score** — higher is better. It combines LLM judge assessments (style similarity, same-author likelihood) with local stylometric features (punctuation patterns, rhythm, compression) and an anti-copy penalty to prevent memorization.
+By design, each experiment runs for a **fixed 5-minute time budget**. The metric is **overall_score** — higher is better. It combines LLM judge assessments (style similarity, same-author likelihood, topic fidelity) with local stylometric features (punctuation patterns, rhythm, compression) and an anti-copy penalty to prevent memorization.
 
 ## Quick start
 
@@ -95,6 +95,19 @@ For the first pass, use around **20–60 posts**.
 - Remove URLs if they dominate your corpus
 - Remove repost boilerplate
 - Keep language consistent if possible
+
+## Safety
+
+**Sandbox mode:** When running the agent autonomously, restrict permissions so that it can only write to `prompts/working_prompt.md` and read `artifacts/`. Disable network access and git push from the agent session.
+
+**API privacy:** All writing samples and generated text are sent to your configured API provider (OpenAI, Ollama, etc.) for generation and judging. If using a cloud API, your data leaves your machine. For maximum privacy, use a local model via Ollama.
+
+**Cost awareness:** Each experiment cycle makes multiple API calls (generation + judging per validation example). With cloud APIs, costs can accumulate during overnight runs. Set `MAX_EXPERIMENTS` in `.env` to cap the total number of experiment cycles, and monitor your API usage dashboard.
+
+**Recommended setup for overnight runs:**
+- Set `MAX_EXPERIMENTS` to a reasonable limit (e.g., 50–200)
+- Use a model with predictable pricing
+- Monitor the first few cycles manually before leaving unattended
 
 ## Acknowledgments
 

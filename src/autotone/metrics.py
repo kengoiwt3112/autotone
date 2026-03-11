@@ -204,6 +204,16 @@ def _std_floor(key: str) -> float:
     return 1.0
 
 
+def topic_keyword_overlap(generated_text: str, topic: str) -> float:
+    """トピックのキーワードが生成テキストにどれだけ含まれるかを計算する (0.0-1.0)"""
+    topic_tokens = set(re.findall(r'\w{2,}', topic.lower()))
+    if not topic_tokens:
+        return 1.0  # トピックが空ならペナルティなし
+    gen_lower = generated_text.lower()
+    hits = sum(1 for t in topic_tokens if t in gen_lower)
+    return hits / len(topic_tokens)
+
+
 def _is_hiragana(ch: str) -> bool:
     code = ord(ch)
     return 0x3040 <= code <= 0x309F

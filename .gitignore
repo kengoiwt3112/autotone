@@ -3,7 +3,8 @@
 __pycache__/
 *.pyc
 *.egg-info/
-.env
+.env*
+!.env.example
 .python-version
 
 artifacts/*
@@ -12,7 +13,8 @@ artifacts/*
 runs/*
 !runs/.gitkeep
 
-data/private/*.jsonl
+data/private/**
+!data/private/README.md
 .cache/
 
 *.log

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 
 from .settings import Settings
 from .utils import ensure_dir, short_hash
@@ -38,6 +38,7 @@ class LLMClient:
             "user": user,
             "temperature": temperature,
             "max_tokens": max_tokens,
+            "json_mode": json_mode,
         }
         cache_path = self._cache_path(payload)
         if cache_path is not None and cache_path.exists():
@@ -60,7 +61,7 @@ class LLMClient:
             kwargs["temperature"] = temperature
         try:
             response = self._client.chat.completions.create(**kwargs)
-        except Exception:
+        except BadRequestError:
             # temperatureが拒否された場合はデフォルトで再試行
             kwargs.pop("temperature", None)
             response = self._client.chat.completions.create(**kwargs)

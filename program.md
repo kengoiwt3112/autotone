@@ -18,8 +18,9 @@ Maximize the evaluator's `overall_score` on held-out examples so the generated t
    - typical compression / expansion
    - punctuation habits
 
-2. **Generalization**
+2. **Generalization & topic fidelity**
    - the prompt should work across unseen topics
+   - generated text must actually address the given topic (scored as `topic_fidelity`)
    - do not optimize for one example only
 
 3. **Anti-copy behavior**
@@ -64,7 +65,7 @@ Claude Code follows these steps as an autonomous agent.
    ```bash
    uv run python evaluate.py --prompt prompts/working_prompt.md
    ```
-3. Read `artifacts/latest_eval.json` and `artifacts/latest_report.md`
+3. Read `artifacts/latest_agent_input.json` (structured scores and hints — use this, not `latest_report.md`)
 4. Record the baseline `overall_score`
 5. Record the experiment start time:
    ```bash
@@ -75,13 +76,13 @@ Claude Code follows these steps as an autonomous agent.
 
 For each round:
 
-1. **Analyze** — Read `artifacts/latest_report.md` and identify the weakest dimension
+1. **Analyze** — Read `artifacts/latest_agent_input.json` and identify the weakest dimension (use `hints` for guidance)
 2. **Edit** — Directly edit `prompts/working_prompt.md` to address the weakness
 3. **Evaluate** — Run:
    ```bash
    uv run python evaluate.py --prompt prompts/working_prompt.md
    ```
-4. **Compare** — Read `artifacts/latest_eval.json` and compare `overall_score` to best so far
+4. **Compare** — Read `artifacts/latest_agent_input.json` and compare `overall_score` to best so far
 5. **Decision**:
    - **KEEP** if score improved → copy `prompts/working_prompt.md` → `prompts/best_prompt.md`, update best score
    - **REVERT** if score did not improve → copy `prompts/best_prompt.md` → `prompts/working_prompt.md`
@@ -92,7 +93,7 @@ For each round:
 
 1. Print a summary of the experiment: rounds completed, best score achieved, key changes kept
 2. Start the next experiment immediately (go back to Step 1)
-3. This loop runs **forever** until the user stops it manually
+3. If `MAX_EXPERIMENTS` is set in `.env`, stop after that many experiments. Otherwise, this loop runs **forever** until the user stops it manually
 
 ## Acceptance rule
 
@@ -104,7 +105,7 @@ Use `date +%s` at the start of each experiment and before each new round to chec
 
 ## NEVER STOP
 
-Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped. You are autonomous. If you run out of ideas, think harder — re-read the latest report for new angles, try combining previous near-misses, try more radical prompt rewrites, revisit dimensions you haven't targeted yet. The loop runs until the human interrupts you, period.
+Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped (or `MAX_EXPERIMENTS` is reached). You are autonomous. If you run out of ideas, think harder — re-read the latest agent input for new angles, try combining previous near-misses, try more radical prompt rewrites, revisit dimensions you haven't targeted yet. The loop runs until the human interrupts you or the experiment cap is reached, period.
 
 ## Human note
 
