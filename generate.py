@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from tone_autoresearch.generate_lib import main
+from autotone.generate_lib import main
 
 if __name__ == "__main__":
     main()

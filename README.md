@@ -1,4 +1,4 @@
-# autoresearch-tone-macos
+# autotone
 
 An autonomous AI research system for **writing tone optimization**, built on the autoresearch pattern.
 

@@ -1,5 +1,5 @@
 [project]
-name = "autoresearch-tone-macos"
+name = "autotone"
 version = "0.1.0"
 description = "A tiny, Mac-friendly autoresearch loop for optimizing prompts to match your writing tone."
 readme = "README.md"
