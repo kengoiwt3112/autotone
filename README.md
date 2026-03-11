@@ -1,6 +1,8 @@
 # autotone
 
-The idea: give an AI agent a writing style corpus and let it experiment overnight. It modifies the prompt, generates text in your voice, checks if the result matches your tone, keeps or discards, and repeats. You wake up in the morning to a log of experiments and (hopefully) a prompt that writes like you. This is [autoresearch](https://github.com/karpathy/autoresearch) applied to **prompt optimization** instead of model training — same shape, different domain.
+[日本語版 README](README.ja.md)
+
+The idea: give an AI agent a writing style corpus and let it experiment overnight. It modifies the prompt, generates text in your voice, checks if the result matches your tone, keeps or discards, and repeats. You wake up in the morning to a log of experiments and (hopefully) a prompt that writes like you. This is [@karpathy/autoresearch](https://github.com/karpathy/autoresearch) applied to **prompt optimization** instead of model training — same shape, different domain.
 
 ## How it works
 
