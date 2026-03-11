@@ -110,8 +110,7 @@ def summarize_style_with_llm(llm: LLMClient, model: str, train: list[dict[str, A
 
 
 def summarize_style_heuristic(train: list[dict[str, Any]]) -> str:
-    x_rows = [row for row in train if row["platform"] == "x"]
-    slack_rows = [row for row in train if row["platform"] == "slack"]
+    platforms = sorted({row["platform"] for row in train})
 
     def avg_len(rows: list[dict[str, Any]]) -> int:
         if not rows:
@@ -132,24 +131,20 @@ def summarize_style_heuristic(train: list[dict[str, Any]]) -> str:
             traits.append("occasionally uses short line breaks")
         if joined.count("!") + joined.count("！") == 0:
             traits.append("rarely relies on exclamation marks")
-        if "I " in joined or "I'" in joined or "私は" in joined or "僕" in joined:
-            traits.append("uses first-person perspective when needed")
         if not traits:
             traits.append("prefers direct statements over ornament")
         return traits
 
-    x_traits = "; ".join(sample_traits(x_rows))
-    slack_traits = "; ".join(sample_traits(slack_rows))
-
-    return textwrap.dedent(
-        f"""        - Overall voice: direct, compressed, and slightly skeptical rather than hype-driven.
-        - Preference: concrete claims over generic inspiration.
-        - Anti-pattern: avoid sounding like a generic assistant or marketing copy.
-        - X style: usually around {avg_len(x_rows)} characters on average; sharper open, one main idea, tighter landing.
-        - X traits: {x_traits}.
-        - Slack style: usually around {avg_len(slack_rows)} characters on average; more context, more operational clarity, still concise.
-        - Slack traits: {slack_traits}.
-        - Preserve the author's level of confidence: decisive, but not absolute unless the source style strongly suggests it.
-        - Do not reuse distinctive phrases from the corpus verbatim.
-        """
-    ).strip()
+    lines = [
+        "- Overall voice: direct, compressed, and slightly skeptical rather than hype-driven.",
+        "- Preference: concrete claims over generic inspiration.",
+        "- Anti-pattern: avoid sounding like a generic assistant or marketing copy.",
+    ]
+    for platform in platforms:
+        rows = [row for row in train if row["platform"] == platform]
+        traits = "; ".join(sample_traits(rows))
+        lines.append(f"- {platform} style: usually around {avg_len(rows)} characters on average.")
+        lines.append(f"- {platform} traits: {traits}.")
+    lines.append("- Preserve the author's level of confidence: decisive, but not absolute unless the source style strongly suggests it.")
+    lines.append("- Do not reuse distinctive phrases from the corpus verbatim.")
+    return "\n".join(lines)

@@ -304,9 +304,14 @@ def format_example_block(ex: dict[str, Any]) -> list[str]:
 def mock_generate(rendered_prompt: str, row: dict[str, Any]) -> str:
     topic = row["topic"]
     platform = row["platform"]
+    lang = row.get("language", "en")
+    if lang == "ja":
+        if platform == "x":
+            return f"{topic}。派手さより、回るループの方が効く。"
+        return f"{topic}について共有です。結論だけ言うと、まずは小さく回してから広げるのが良さそうです。"
     if platform == "x":
-        return f"{topic}。派手さより、回るループの方が効く。"
-    return f"{topic}について共有です。結論だけ言うと、まずは小さく回してから広げるのが良さそうです。"
+        return f"{topic}. Small loops beat big rewrites."
+    return f"Quick update on {topic}. Start small, iterate, then scale."
 
 
 def strip_outer_quotes(text: str) -> str:

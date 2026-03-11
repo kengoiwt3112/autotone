@@ -32,18 +32,39 @@ FEATURE_KEYS = [
     "hiragana_ratio",
     "katakana_ratio",
     "kanji_ratio",
+    "hangul_ratio",
+    "cyrillic_ratio",
+    "arabic_ratio",
     "newline_ratio",
 ]
 
 
 def detect_language(text: str) -> str:
-    ascii_chars = sum(1 for ch in text if ord(ch) < 128)
-    jp_chars = sum(1 for ch in text if _is_hiragana(ch) or _is_katakana(ch) or _is_kanji(ch))
-    if jp_chars > ascii_chars * 1.2:
-        return "ja"
-    if ascii_chars > jp_chars * 1.2:
+    counts: dict[str, int] = {"latin": 0, "ja": 0, "ko": 0, "zh": 0, "cyrillic": 0, "arabic": 0, "other": 0}
+    for ch in text:
+        code = ord(ch)
+        if code < 128 or (0x00C0 <= code <= 0x024F):
+            counts["latin"] += 1
+        elif _is_hiragana(ch) or _is_katakana(ch):
+            counts["ja"] += 1
+        elif _is_hangul(ch):
+            counts["ko"] += 1
+        elif _is_kanji(ch):
+            counts["zh"] += 1  # CJK shared; counted separately from kana
+        elif 0x0400 <= code <= 0x04FF:
+            counts["cyrillic"] += 1
+        elif 0x0600 <= code <= 0x06FF:
+            counts["arabic"] += 1
+    # Japanese = kana present alongside kanji
+    if counts["ja"] > 0:
+        counts["ja"] += counts["zh"]
+        counts["zh"] = 0
+    top = max(counts, key=lambda k: counts[k])
+    if counts[top] == 0:
         return "en"
-    return "mixed"
+    if top == "latin":
+        return "en"
+    return top
 
 
 def extract_features(text: str) -> dict[str, float]:
@@ -65,6 +86,9 @@ def extract_features(text: str) -> dict[str, float]:
     hira = sum(1 for ch in text if _is_hiragana(ch))
     kata = sum(1 for ch in text if _is_katakana(ch))
     kanji = sum(1 for ch in text if _is_kanji(ch))
+    hangul = sum(1 for ch in text if _is_hangul(ch))
+    cyrillic = sum(1 for ch in text if 0x0400 <= ord(ch) <= 0x04FF)
+    arabic = sum(1 for ch in text if 0x0600 <= ord(ch) <= 0x06FF)
     emojis = sum(1 for ch in text if _is_emoji(ch))
 
     return {
@@ -90,13 +114,17 @@ def extract_features(text: str) -> dict[str, float]:
         "hiragana_ratio": hira / char_count,
         "katakana_ratio": kata / char_count,
         "kanji_ratio": kanji / char_count,
+        "hangul_ratio": hangul / char_count,
+        "cyrillic_ratio": cyrillic / char_count,
+        "arabic_ratio": arabic / char_count,
         "newline_ratio": text.count("\n") / char_count,
     }
 
 
 def build_style_profile(rows: list[dict[str, Any]]) -> dict[str, Any]:
     by_platform: dict[str, list[dict[str, float]]] = {}
-    for platform in {"x", "slack"}:
+    platforms = {row["platform"] for row in rows}
+    for platform in sorted(platforms):
         texts = [row["reference_text"] for row in rows if row["platform"] == platform]
         if texts:
             by_platform[platform] = [extract_features(text) for text in texts]
@@ -152,11 +180,11 @@ def topic_overlap_score(topic: str, text: str) -> float:
 
 def platform_fit_score(platform: str, text: str, target_length: int) -> float:
     length_score = exp_similarity(len(text) - target_length, max(20, target_length * 0.45))
-    line_score = 1.0
-    if platform == "x":
-        line_score = 1.0 if text.count("\n") <= 2 else 0.7
-    elif platform == "slack":
-        line_score = 1.0 if text.count("\n") <= 4 else 0.7
+    newlines = text.count("\n")
+    # プラットフォーム別の改行上限（短文系は少なめ、メッセージ系は多め）
+    max_newlines = {"x": 2, "slack": 4, "discord": 4, "email": 8}
+    limit = max_newlines.get(platform, 4)
+    line_score = 1.0 if newlines <= limit else 0.7
     return clamp(0.8 * length_score + 0.2 * line_score, 0.0, 1.0)
 
 
@@ -214,9 +242,10 @@ def _std_floor(key: str) -> float:
 
 def _coarse_tokens(text: str) -> list[str]:
     text = text.lower()
-    pieces = re.findall(r"[a-z0-9_]{2,}|[\u3040-\u30ff\u3400-\u9fff]{2,}", text)
-    seen = []
-    used = set()
+    # Unicode word sequences (2+ chars) — covers Latin, Cyrillic, Arabic, Hangul, Kana, CJK, etc.
+    pieces = re.findall(r"\w{2,}", text, re.UNICODE)
+    seen: list[str] = []
+    used: set[str] = set()
     for p in pieces:
         if p not in used:
             used.add(p)
@@ -232,6 +261,11 @@ def _is_hiragana(ch: str) -> bool:
 def _is_katakana(ch: str) -> bool:
     code = ord(ch)
     return 0x30A0 <= code <= 0x30FF
+
+
+def _is_hangul(ch: str) -> bool:
+    code = ord(ch)
+    return 0xAC00 <= code <= 0xD7AF
 
 
 def _is_kanji(ch: str) -> bool:
