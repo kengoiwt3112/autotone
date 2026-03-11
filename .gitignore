@@ -18,5 +18,6 @@ data/private/*.jsonl
 *.log
 
 # editor / tool configs
+CLAUDE.md
 .claude/
 .entire/
