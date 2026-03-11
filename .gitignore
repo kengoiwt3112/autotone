@@ -23,6 +23,7 @@ prompts/working_prompt.md
 prompts/best_prompt.md
 
 # editor / tool configs
+AGENTS.md
 CLAUDE.md
 .claude/
 .entire/

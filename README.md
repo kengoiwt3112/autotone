@@ -10,7 +10,7 @@ The repo is deliberately kept small and only really has four files that matter:
 - **`evaluate.py`** — the fixed evaluator. Generates text from the prompt, scores it against your real writing style using LLM judges and local stylometrics. Not modified.
 - **`prompts/default_prompt.md`** — the starter template shipped with the repo. Auto-copied to `working_prompt.md` on first run. Not modified after that.
 - **`prompts/working_prompt.md`** — the single file the agent edits. Contains the full system prompt that tells the LLM how to write like you. **This file is edited and iterated on by the agent.** (gitignored)
-- **`program.md`** — instructions for the agent. Point Claude Code here and let it go. **This file is edited and iterated on by the human.**
+- **`program.md`** — instructions for the agent. Point Claude Code or Codex here and let it go. **This file is edited and iterated on by the human.**
 
 By design, each experiment runs for a **fixed 5-minute time budget**. The metric is **overall_score** — higher is better. It combines LLM judge assessments (style similarity, same-author likelihood, topic fidelity) with local stylometric features (punctuation patterns, rhythm, compression) and an anti-copy penalty to prevent memorization.
 
@@ -50,13 +50,21 @@ Smoke-test mode (no API needed): `MOCK_LLM=1`
 
 ## Running the agent
 
-Simply spin up Claude Code in this repo, then prompt something like:
+Simply spin up Claude Code or Codex in this repo, then prompt something like:
 
 ```
 Have a look at program.md and kick off a new experiment. Start with the setup.
 ```
 
 The agent then autonomously iterates — editing the prompt, evaluating, keeping improvements — in 5-minute experiment cycles until you stop it.
+
+The intended workflow is the same for either tool:
+
+- Read `program.md`
+- Read `artifacts/latest_agent_input.json`
+- Edit only `prompts/working_prompt.md`
+- Run `uv run python evaluate.py`
+- Keep or revert changes based on `overall_score`
 
 ## Project structure
 
