@@ -39,6 +39,9 @@ uv run python prepare.py
 
 # 6. Run a single evaluation
 uv run python evaluate.py --prompt prompts/working_prompt.md
+
+# 7. (Optional) Generate human-readable report with raw text
+uv run python evaluate.py --prompt prompts/working_prompt.md --report
 ```
 
 If the above commands all work ok, your setup is working and you can go into autonomous research mode.
@@ -102,7 +105,7 @@ For the first pass, use around **20–60 posts**.
 
 **API privacy:** All writing samples and generated text are sent to your configured API provider (OpenAI, Ollama, etc.) for generation and judging. If using a cloud API, your data leaves your machine. For maximum privacy, use a local model via Ollama.
 
-**Cost awareness:** Each experiment cycle makes multiple API calls (generation + judging per validation example). With cloud APIs, costs can accumulate during overnight runs. Set `MAX_EXPERIMENTS` in `.env` to cap the total number of experiment cycles, and monitor your API usage dashboard.
+**Cost awareness:** Each experiment cycle makes multiple API calls (generation + judging per validation example). With cloud APIs, costs can accumulate during overnight runs. Set `MAX_EXPERIMENTS` in `.env` to cap the total number of evaluations — the evaluator enforces this as a hard stop at the code level, regardless of how it is invoked.
 
 **Recommended setup for overnight runs:**
 - Set `MAX_EXPERIMENTS` to a reasonable limit (e.g., 50–200)

@@ -26,6 +26,18 @@ from .utils import (
 REQUIRED_PLACEHOLDERS = ["{{STYLE_BRIEF}}", "{{TOPIC}}", "{{TARGET_LENGTH}}"]
 
 
+def _count_log_entries(log_path: Path) -> int:
+    """experiments.jsonl の有効行数を返す。"""
+    if not log_path.exists():
+        return 0
+    count = 0
+    with log_path.open("r", encoding="utf-8") as f:
+        for line in f:
+            if line.strip():
+                count += 1
+    return count
+
+
 def _ensure_prompt(prompts_dir: Path, filename: str) -> Path:
     """working/best が無ければ default_prompt.md からコピーして返す。"""
     import shutil
@@ -45,10 +57,22 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None, help="Optional validation set limit")
     parser.add_argument("--split", type=str, default="validation", choices=["validation", "train"])
     parser.add_argument("--output", type=Path, default=None, help="Path to JSON output")
+    parser.add_argument("--report", action="store_true", help="Generate latest_report.md (contains raw text, for human review)")
     args = parser.parse_args()
 
     settings = load_settings()
     project_root = settings.project_root
+
+    # MAX_EXPERIMENTS のハードキャップ（experiments.jsonl の行数で判定）
+    if settings.max_experiments is not None:
+        experiment_log = project_root / "runs" / "experiments.jsonl"
+        done = _count_log_entries(experiment_log)
+        if done >= settings.max_experiments:
+            raise SystemExit(
+                f"HARD STOP: {done} evaluations completed (cap: {settings.max_experiments}). "
+                f"Increase MAX_EXPERIMENTS in .env or remove the cap to continue."
+            )
+
     prompt_path = args.prompt or _ensure_prompt(project_root / "prompts", "working_prompt.md")
     output_path = args.output or (project_root / "artifacts" / "latest_eval.json")
 
@@ -59,8 +83,11 @@ def main() -> None:
         settings=settings,
     )
     write_json(output_path, result)
+
+    # 人間向けレポート（生テキストを含むため --report 指定時のみ生成）
     report_path = output_path.with_name("latest_report.md")
-    write_text(report_path, build_markdown_report(result))
+    if args.report:
+        write_text(report_path, build_markdown_report(result))
 
     # エージェント向け構造化入力（生テキストを含まない安全な形式）
     agent_input_path = output_path.with_name("latest_agent_input.json")
@@ -84,7 +111,8 @@ def main() -> None:
 
     print(f"Score: {result['overall_score']:.2f}")
     print(f"Wrote: {output_path}")
-    print(f"Wrote: {report_path}")
+    if args.report:
+        print(f"Wrote: {report_path}")
     print(f"Wrote: {agent_input_path}")
     print(f"Wrote: {experiment_log}")
 
@@ -330,9 +358,9 @@ def build_agent_input(result: dict[str, Any]) -> dict[str, Any]:
     """エージェントが読み取る構造化データ。生テキストは含まない。"""
     examples_summary = []
     for ex in result.get("examples", []):
-        # judge comment は間接プロンプトインジェクション防止のため切り詰め
-        judge_safe = {k: v for k, v in ex["judge"].items() if k != "comment"}
-        judge_safe["comment"] = str(ex["judge"].get("comment", ""))[:120]
+        # judge の自由テキスト (comment) は間接プロンプトインジェクション防止のため除外
+        # エージェントには構造化された hints のみを提供する
+        judge_scores = {k: v for k, v in ex["judge"].items() if k != "comment"}
         examples_summary.append({
             "id": ex["id"],
             "topic": ex["topic"],
@@ -340,7 +368,7 @@ def build_agent_input(result: dict[str, Any]) -> dict[str, Any]:
             "generated_length": len(ex.get("generated_text", "")),
             "sample_score": ex["sample_score"],
             "local_metrics": ex["local_metrics"],
-            "judge": judge_safe,
+            "judge": judge_scores,
         })
 
     return {
