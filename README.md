@@ -72,17 +72,14 @@ Smoke-test mode (no API needed): `MOCK_LLM=1`
 data/private/raw_posts.jsonl
 ```
 
-One JSON object per line:
+One JSON object per line. Only `text` is required:
 
 ```json
-{"text":"Small posts go here.","topic":"what the post is about"}
-{"text":"Longer internal message goes here.","topic":"project update on eval quality"}
+{"text":"Small posts go here."}
+{"text":"Longer internal message goes here."}
 ```
 
-- `text`: your original post
-- `topic`: optional but **recommended** — a neutral topic hint improves evaluation quality
-
-If `topic` is missing, `prepare.py` will infer one heuristically, or with `PREP_MODEL` if configured.
+`prepare.py` automatically infers topics and other metadata from your text.
 
 ### Prepare and run
 
@@ -133,7 +130,6 @@ For the first pass, use around **20–60 posts**.
 - Remove URLs if they dominate your corpus
 - Remove repost boilerplate
 - Keep language consistent if possible
-- Supply `topic` manually for the cleanest evaluation
 
 ## Notes
 

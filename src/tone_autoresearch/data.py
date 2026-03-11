@@ -31,7 +31,6 @@ def load_raw_posts(path: Path) -> list[dict[str, Any]]:
             {
                 "id": str(row.get("id", f"post_{i+1:03d}")),
                 "text": text,
-                "topic": row.get("topic"),
                 "language": row.get("language") or detect_language(text),
             }
         )

@@ -2,16 +2,11 @@ Put your real dataset here as:
 
 - `data/private/raw_posts.jsonl`
 
-One JSON object per line.
-
-Example:
+One JSON object per line. Only `text` is required.
 
 ```json
-{"text":"I think the eval problem is mostly a product problem now.","topic":"why evals are becoming a product problem"}
-{"text":"Quick update: the retrieval experiment is stable now. Next step is cleaning the labels.","topic":"retrieval experiment update and next step"}
+{"text":"I think the eval problem is mostly a product problem now."}
+{"text":"Quick update: the retrieval experiment is stable now. Next step is cleaning the labels."}
 ```
 
-Recommended fields:
-
-- `text`: your original post
-- `topic`: optional but strongly recommended
+`prepare.py` will automatically infer topics and other metadata.

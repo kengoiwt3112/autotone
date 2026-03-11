@@ -158,7 +158,6 @@ def copy_penalty(text: str, references: list[str]) -> float:
     return clamp(max(ratios), 0.0, 1.0)
 
 
-
 def local_style_bundle(
     generated_text: str,
     reference_text: str,
@@ -203,7 +202,6 @@ def _std_floor(key: str) -> float:
     if key in {"char_count", "avg_line_chars", "avg_sentence_chars"}:
         return 8.0
     return 1.0
-
 
 
 def _is_hiragana(ch: str) -> bool:

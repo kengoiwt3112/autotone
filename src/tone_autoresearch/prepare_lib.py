@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -31,12 +30,10 @@ def main() -> None:
     llm = LLMClient(settings)
     normalized = []
     for row in rows:
-        topic = row.get("topic")
-        if not topic:
-            if settings.prep_model and not settings.mock_llm:
-                topic = infer_topic_with_llm(llm, settings.prep_model, row["text"])
-            else:
-                topic = infer_topic_heuristic(row["text"])
+        if settings.prep_model and not settings.mock_llm:
+            topic = infer_topic_with_llm(llm, settings.prep_model, row["text"])
+        else:
+            topic = infer_topic_heuristic(row["text"])
         normalized.append(
             {
                 "id": row["id"],
@@ -68,15 +65,68 @@ def main() -> None:
 
 
 def infer_topic_heuristic(text: str) -> str:
+    """投稿テキストからキーワードを抽出し、中立的なトピックヒントを生成する。"""
+    import re
+
     clean = text.replace("\n", " ")
     clean = " ".join(clean.split())
-    clean = clean.replace("http://", "").replace("https://", "")
-    parts = clean.split("。")
-    first = parts[0] if parts else clean
-    first = first[:120].strip(" -–—:;,.!?！？")
-    if len(first) < 10:
-        return human_preview(clean, 90)
-    return first
+    # URL・メンション・ハッシュタグ除去
+    clean = re.sub(r"https?://\S+", "", clean)
+    clean = re.sub(r"[@#]\S+", "", clean)
+    # 引用符・括弧除去
+    clean = re.sub(r"[\"'""''「」()（）]", "", clean)
+    clean = " ".join(clean.split()).strip()
+
+    # キーワード抽出：ストップワードを除いた内容語を集める
+    keywords = _extract_keywords(clean)
+    if len(keywords) >= 3:
+        return " / ".join(keywords[:6])
+
+    # キーワードが少ない場合は先頭文を短縮
+    return human_preview(clean, 90)
+
+
+def _extract_keywords(text: str) -> list[str]:
+    """テキストから内容語（名詞・形容詞・動詞の原形に近いもの）を抽出する。"""
+    import re
+
+    # 英語ストップワード（機能語・一人称・口調表現）
+    stopwords = {
+        "i", "me", "my", "we", "us", "our", "you", "your", "he", "she", "it", "they", "them",
+        "the", "a", "an", "is", "am", "are", "was", "were", "be", "been", "being",
+        "have", "has", "had", "do", "does", "did", "will", "would", "could", "should",
+        "can", "may", "might", "shall", "must",
+        "not", "no", "dont", "doesnt", "didnt", "wont", "cant", "isnt", "arent", "wasnt",
+        "and", "or", "but", "if", "then", "so", "because", "while", "when", "where",
+        "that", "this", "these", "those", "what", "which", "who", "how", "why",
+        "of", "in", "on", "at", "to", "for", "with", "by", "from", "about", "into",
+        "up", "out", "over", "just", "also", "very", "too", "really", "quite",
+        "here", "there", "now", "still", "yet", "already", "than", "more", "most", "less",
+        "its", "im", "ive", "id", "ill", "lets", "heres", "theres", "thats",
+        "think", "want", "need", "know", "see", "get", "got", "make", "take",
+        "thing", "way", "lot", "much", "some", "any", "all", "one", "two",
+    }
+
+    # 日本語ストップワード
+    ja_stops = {"の", "は", "が", "を", "に", "で", "と", "も", "な", "だ", "です", "ます", "する", "ある", "いる", "なる", "れる", "られる",
+                "こと", "もの", "ため", "よう", "それ", "これ", "どう", "何", "私", "僕", "自分"}
+
+    # 英語: アルファベット2文字以上の単語
+    en_words = re.findall(r"[a-zA-Z]{2,}", text.lower())
+    en_words = [w for w in en_words if w.replace("'", "") not in stopwords]
+
+    # 日本語: 漢字2文字以上 or カタカナ2文字以上の連続
+    ja_words = re.findall(r"[\u4e00-\u9fff\u3400-\u4dbf]{2,}|[\u30a0-\u30ff]{2,}", text)
+    ja_words = [w for w in ja_words if w not in ja_stops]
+
+    # 出現順を保持しつつ重複排除
+    seen: set[str] = set()
+    keywords: list[str] = []
+    for w in en_words + ja_words:
+        if w not in seen:
+            seen.add(w)
+            keywords.append(w)
+    return keywords
 
 
 def infer_topic_with_llm(llm: LLMClient, model: str, text: str) -> str:
