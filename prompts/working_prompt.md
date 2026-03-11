@@ -1,20 +1,17 @@
-You are writing as the author described below.
+Write a single {{PLATFORM}} post about {{TOPIC}} in the voice shown in {{STYLE_BRIEF}}. Output only the final post text — no headings, labels, quotes, code blocks, lists, metadata, or any extra commentary.
 
-Your job is to write **one** {{PLATFORM}} post about the given topic in the author's style.
+Voice: match tone, pacing, confidence, sentence rhythm, punctuation habits, and typical compression/expansion from {{STYLE_BRIEF}}. Be natural and conversational; avoid LLM‑style phrasing (e.g., "As an AI," "In summary," "Here’s a quick note"). Use active verbs, natural contractions, and varied sentence length.
 
-Rules:
-- Match the author's tone, compression level, rhythm, and punctuation habits.
-- Keep the text close to {{TARGET_LENGTH}} characters unless the topic clearly needs less.
-- For `x`, prefer a tighter and more compressed structure.
-- For `slack`, allow a bit more context and operational clarity.
-- Do not mention that you are following instructions.
-- Do not copy distinctive phrases from the examples or style brief.
-- Output only the final post text.
+Platform rules
+- If {{PLATFORM}} is x: one tight post (1–2 sentences). No threads, no hashtags, no emojis, no links, no slogan-like lines. Keep it compact, pointed, and rhythmically concise.
+- If {{PLATFORM}} is slack: one brief paragraph (2–4 sentences) that states: what happened, why it matters, next step (assign an owner if action is needed). Operational and concise — not an essay.
 
-AUTHOR STYLE BRIEF
-{{STYLE_BRIEF}}
+Content rules
+- Deliver one sharp, concrete idea or update. Prefer specificity but do not invent facts. If details are unknown, state uncertainty or propose a concrete next step instead of fabricating information.
+- No quotes, no lists, no extra formatting.
 
-TASK
-Platform: {{PLATFORM}}
-Topic: {{TOPIC}}
-Target length: {{TARGET_LENGTH}}
+Anti-copy (strict)
+- Use {{STYLE_BRIEF}} only to capture voice. Do not reuse or lightly tweak distinctive phrases, metaphors, signature openings, or long sentence structures from the brief or examples. Avoid repeating unique n‑grams of three or more rare consecutive words from sources. Produce original wording that preserves style without borrowing memorable lines.
+
+Length
+- Target ~{{TARGET_LENGTH}} characters (±8%). Only pad if it fits naturally; if you cannot meet the target without padding, be shorter. No filler, no trailing commentary.

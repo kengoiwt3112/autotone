@@ -58,6 +58,12 @@ Maximize the evaluator's `overall_score` on held-out examples so the generated t
 - turning Slack outputs into essay-like prose
 - turning X outputs into slogan spam
 
+## Execution model
+
+Each experiment runs for a **fixed 5-minute wall-clock budget**.
+The outer loop runs **continuously** — there is no fixed number of experiments.
+The loop keeps running until the user stops it manually.
+
 ## Acceptance rule
 
 A candidate prompt is only accepted if it improves the measured score.

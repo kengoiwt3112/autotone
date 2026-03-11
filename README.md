@@ -170,8 +170,10 @@ Outputs:
 ### 8) Optimize the prompt
 
 ```bash
-uv run python optimize.py --rounds 8
+uv run python optimize.py
 ```
+
+Each experiment runs for a **fixed 5-minute time budget** (wall clock), then the loop restarts automatically. This runs **continuously** until you stop it with `Ctrl-C`. You can customize with `--budget 600` (10 min per experiment) or `--rounds 3` (cap iterations within each experiment).
 
 Best prompt is written to:
 
@@ -229,8 +231,8 @@ uv run python prepare.py
 # 3. baseline
 uv run python evaluate.py --prompt prompts/working_prompt.md
 
-# 4. optimize
-uv run python optimize.py --rounds 6
+# 4. optimize (runs continuously, Ctrl-C to stop)
+uv run python optimize.py
 
 # 5. generate a new post
 uv run python generate.py --platform x --topic "why evals should be productized earlier"

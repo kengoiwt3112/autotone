@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import time
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,9 @@ from .utils import human_preview, read_text, write_json, write_text
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Optimize the working prompt with a keep/revert loop.")
-    parser.add_argument("--rounds", type=int, default=6)
+    parser.add_argument("--rounds", type=int, default=None, help="Max rounds per experiment (default: unlimited)")
+    parser.add_argument("--budget", type=int, default=300, help="Time budget per experiment in seconds (default 300 = 5 min)")
+    parser.add_argument("--experiments", type=int, default=None, help="Number of experiments to run (default: unlimited = run forever)")
     parser.add_argument("--limit", type=int, default=None, help="Optional validation set limit")
     args = parser.parse_args()
 
@@ -39,51 +42,71 @@ def main() -> None:
     shutil.copy2(prompt_path, best_prompt_path)
 
     llm = LLMClient(settings)
+    global_round = 0
+    experiment = 0
 
     print(f"Baseline score: {best_score:.2f}")
+    print(f"Budget: {args.budget}s per experiment | Running continuously (Ctrl-C to stop)")
 
-    for round_idx in range(1, args.rounds + 1):
-        current_prompt = read_text(prompt_path)
-        program_md = read_text(program_path)
-        candidate_prompt = propose_candidate_prompt(
-            llm=llm,
-            settings=settings,
-            current_prompt=current_prompt,
-            best_eval=best_eval,
-            program_md=program_md,
-            round_idx=round_idx,
-        )
+    while True:
+        experiment += 1
+        if args.experiments is not None and experiment > args.experiments:
+            break
 
-        round_dir = runs_dir / f"round_{round_idx:03d}"
-        round_dir.mkdir(parents=True, exist_ok=True)
-        candidate_path = round_dir / "candidate_prompt.md"
-        write_text(candidate_path, candidate_prompt)
+        t_start = time.time()
+        round_in_exp = 0
+        print(f"\n=== Experiment {experiment} started ===")
 
-        write_text(prompt_path, candidate_prompt)
-        candidate_eval = evaluate_prompt(
-            prompt_path=prompt_path,
-            split="validation",
-            limit=args.limit,
-            settings=settings,
-        )
-        write_json(round_dir / "eval.json", candidate_eval)
+        while True:
+            round_in_exp += 1
+            global_round += 1
+            elapsed = time.time() - t_start
+            if elapsed >= args.budget:
+                print(f"--- Experiment {experiment} done ({elapsed:.0f}s, {round_in_exp - 1} rounds) ---")
+                break
+            if args.rounds is not None and round_in_exp > args.rounds:
+                print(f"--- Experiment {experiment} done ({round_in_exp - 1} rounds) ---")
+                break
 
-        score = float(candidate_eval["overall_score"])
-        improved = score > best_score
+            current_prompt = read_text(prompt_path)
+            program_md = read_text(program_path)
+            candidate_prompt = propose_candidate_prompt(
+                llm=llm,
+                settings=settings,
+                current_prompt=current_prompt,
+                best_eval=best_eval,
+                program_md=program_md,
+                round_idx=global_round,
+            )
 
-        if improved:
-            best_score = score
-            best_eval = candidate_eval
-            shutil.copy2(prompt_path, best_prompt_path)
-            write_json(project_root / "artifacts" / "best_eval.json", best_eval)
-            status = "ACCEPT"
-        else:
-            shutil.copy2(best_prompt_path, prompt_path)
-            status = "REJECT"
+            round_dir = runs_dir / f"round_{global_round:03d}"
+            round_dir.mkdir(parents=True, exist_ok=True)
+            write_text(round_dir / "candidate_prompt.md", candidate_prompt)
 
-        print(f"[round {round_idx:02d}] {status} {score:.2f} (best {best_score:.2f})")
+            write_text(prompt_path, candidate_prompt)
+            candidate_eval = evaluate_prompt(
+                prompt_path=prompt_path,
+                split="validation",
+                limit=args.limit,
+                settings=settings,
+            )
+            write_json(round_dir / "eval.json", candidate_eval)
 
-    print(f"Best prompt: {best_prompt_path}")
+            score = float(candidate_eval["overall_score"])
+            if score > best_score:
+                best_score = score
+                best_eval = candidate_eval
+                shutil.copy2(prompt_path, best_prompt_path)
+                write_json(project_root / "artifacts" / "best_eval.json", best_eval)
+                status = "ACCEPT"
+            else:
+                shutil.copy2(best_prompt_path, prompt_path)
+                status = "REJECT"
+
+            elapsed = time.time() - t_start
+            print(f"  [exp {experiment} round {round_in_exp:02d}] {status} {score:.2f} (best {best_score:.2f}) [{elapsed:.0f}s]")
+
+    print(f"\nBest prompt: {best_prompt_path}")
     print(f"Best score: {best_score:.2f}")
 
 
