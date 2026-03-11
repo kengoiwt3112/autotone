@@ -14,7 +14,6 @@ class Settings:
     openai_api_key: str
     generator_model: str | None
     judge_model: str | None
-    optimizer_model: str | None
     prep_model: str | None
     request_timeout_s: int
     random_seed: int
@@ -38,7 +37,6 @@ def load_settings(project_root: Path | None = None) -> Settings:
         openai_api_key=os.getenv("OPENAI_API_KEY", "ollama"),
         generator_model=_empty_to_none(os.getenv("GENERATOR_MODEL")),
         judge_model=_empty_to_none(os.getenv("JUDGE_MODEL")),
-        optimizer_model=_empty_to_none(os.getenv("OPTIMIZER_MODEL")),
         prep_model=_empty_to_none(os.getenv("PREP_MODEL")),
         request_timeout_s=int(os.getenv("REQUEST_TIMEOUT_S", "120")),
         random_seed=int(os.getenv("RANDOM_SEED", "42")),

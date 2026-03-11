@@ -24,7 +24,7 @@ Instead of training a model, this repo optimizes **one prompt file** so an LLM c
    - topicality
    - copy risk / overfitting
    - local stylometric similarity
-5. `optimize.py` proposes prompt edits, evaluates them, and keeps only improvements.
+5. **Claude Code** reads `program.md`, edits `prompts/working_prompt.md`, evaluates, and keeps only improvements — acting as an autonomous optimization agent.
 
 This is intentionally simple and small.
 
@@ -47,10 +47,10 @@ Do **not** commit private Slack content or personal exports into a public reposi
 ```text
 prepare.py                # fixed prep pipeline
 evaluate.py               # fixed evaluator
-optimize.py               # keep/revert optimization loop
 generate.py               # use best prompt on a new topic
 
-program.md                # human-written research brief
+program.md                # human-written research brief + experiment loop procedure
+CLAUDE.md                 # project instructions for Claude Code
 prompts/working_prompt.md # the single file the optimizer edits
 prompts/best_prompt.md    # current best prompt
 
@@ -93,7 +93,6 @@ OPENAI_API_KEY=sk-your-api-key-here
 
 GENERATOR_MODEL=gpt-5-mini
 JUDGE_MODEL=gpt-5
-OPTIMIZER_MODEL=gpt-5
 PREP_MODEL=gpt-5-mini
 ```
 
@@ -105,7 +104,6 @@ OPENAI_API_KEY=ollama
 
 GENERATOR_MODEL=qwen2.5:14b
 JUDGE_MODEL=qwen2.5:14b
-OPTIMIZER_MODEL=qwen2.5:14b
 PREP_MODEL=qwen2.5:14b
 ```
 
@@ -167,21 +165,15 @@ Outputs:
 - `artifacts/latest_eval.json`
 - `artifacts/latest_report.md`
 
-### 8) Optimize the prompt
+### 8) Start the optimization loop with Claude Code
 
-```bash
-uv run python optimize.py
+Launch Claude Code in this directory and say:
+
+```
+program.mdを見て実験を始めてください
 ```
 
-Each experiment runs for a **fixed 5-minute time budget** (wall clock), then the loop restarts automatically. This runs **continuously** until you stop it with `Ctrl-C`. You can customize with `--budget 600` (10 min per experiment) or `--rounds 3` (cap iterations within each experiment).
-
-Best prompt is written to:
-
-```text
-prompts/best_prompt.md
-```
-
-Each round is logged under `runs/`.
+Claude Code will read `program.md`, run the evaluation loop, edit `prompts/working_prompt.md`, and keep only improvements. The loop runs **continuously** with 5-minute experiment budgets until you stop it.
 
 ### 9) Generate a fresh post
 
@@ -231,8 +223,8 @@ uv run python prepare.py
 # 3. baseline
 uv run python evaluate.py --prompt prompts/working_prompt.md
 
-# 4. optimize (runs continuously, Ctrl-C to stop)
-uv run python optimize.py
+# 4. start Claude Code and tell it to run program.md
+# (runs continuously, Ctrl-C to stop)
 
 # 5. generate a new post
 uv run python generate.py --platform x --topic "why evals should be productized earlier"
@@ -246,6 +238,7 @@ uv run python generate.py --platform x --topic "why evals should be productized 
 - Local models are fine for cheap iteration, but a stronger judge usually gives better gradients for optimization.
 - **Reasoning models** (GPT-5, o-series, etc.) are supported. The LLM client automatically handles `max_completion_tokens` and `temperature` restrictions.
 - If your personal corpus is sensitive, keep `data/private/` out of version control and avoid uploading confidential Slack exports.
+- **Claude Code agent design**: The optimization loop is driven by Claude Code itself, not by a Python script. See `CLAUDE.md` and `program.md` for details.
 
 ## License
 

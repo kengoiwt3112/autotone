@@ -47,26 +47,67 @@ Maximize the evaluator's `overall_score` on held-out examples so the generated t
 - improve platform-specific behavior
 - make the anti-copy rule explicit
 - clarify length control
-- make the writing feel more natural, less “LLM-ish”
+- make the writing feel more natural, less "LLM-ish"
 - avoid generic motivational or corporate language unless it actually appears in the corpus
 
 ## Avoid
 
 - overly rigid style rules that flatten the voice
-- direct mention of “imitating” or “copying” a specific person
+- direct mention of "imitating" or "copying" a specific person
 - adding lots of formatting constraints that do not help score
 - turning Slack outputs into essay-like prose
 - turning X outputs into slogan spam
 
-## Execution model
+---
 
-Each experiment runs for a **fixed 5-minute wall-clock budget**.
-The outer loop runs **continuously** — there is no fixed number of experiments.
-The loop keeps running until the user stops it manually.
+## Experiment loop procedure
+
+Claude Code follows these steps as an autonomous agent.
+
+### Step 1: Baseline
+
+1. Copy `prompts/best_prompt.md` → `prompts/working_prompt.md`
+2. Run evaluation:
+   ```bash
+   uv run python evaluate.py --prompt prompts/working_prompt.md
+   ```
+3. Read `artifacts/latest_eval.json` and `artifacts/latest_report.md`
+4. Record the baseline `overall_score`
+5. Record the experiment start time:
+   ```bash
+   date +%s
+   ```
+
+### Step 2: Rounds (repeat within 5-minute budget)
+
+For each round:
+
+1. **Analyze** — Read `artifacts/latest_report.md` and identify the weakest dimension
+2. **Edit** — Directly edit `prompts/working_prompt.md` to address the weakness
+3. **Evaluate** — Run:
+   ```bash
+   uv run python evaluate.py --prompt prompts/working_prompt.md
+   ```
+4. **Compare** — Read `artifacts/latest_eval.json` and compare `overall_score` to best so far
+5. **Decision**:
+   - **KEEP** if score improved → copy `prompts/working_prompt.md` → `prompts/best_prompt.md`, update best score
+   - **REVERT** if score did not improve → copy `prompts/best_prompt.md` → `prompts/working_prompt.md`
+6. **Report** — Print a 1-line summary: `Round N: score X.XX → Y.YY [KEEP/REVERT]`
+7. **Time check** — Run `date +%s` and compare to start time. If 300+ seconds elapsed, end the experiment.
+
+### Step 3: Experiment end
+
+1. Print a summary of the experiment: rounds completed, best score achieved, key changes kept
+2. Start the next experiment immediately (go back to Step 1)
+3. This loop runs **forever** until the user stops it manually
 
 ## Acceptance rule
 
 A candidate prompt is only accepted if it improves the measured score.
+
+## Time management
+
+Use `date +%s` at the start of each experiment and before each new round to check elapsed time. Each experiment has a **5-minute (300 second) wall-clock budget**.
 
 ## Human note
 
