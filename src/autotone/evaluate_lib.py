@@ -51,6 +51,19 @@ def _ensure_prompt(prompts_dir: Path, filename: str) -> Path:
     return target
 
 
+def _resolve_prompt_path(project_root: Path, prompt_path: Path | None) -> Path:
+    prompts_dir = project_root / "prompts"
+    if prompt_path is None:
+        return _ensure_prompt(prompts_dir, "working_prompt.md")
+
+    normalized = Path(*prompt_path.parts)
+    if normalized in {Path("prompts/working_prompt.md"), Path("working_prompt.md")}:
+        return _ensure_prompt(prompts_dir, "working_prompt.md")
+    if normalized in {Path("prompts/best_prompt.md"), Path("best_prompt.md")}:
+        return _ensure_prompt(prompts_dir, "best_prompt.md")
+    return prompt_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate a prompt against held-out examples.")
     parser.add_argument("--prompt", type=Path, default=None, help="Path to prompt template")
@@ -73,7 +86,7 @@ def main() -> None:
                 f"Increase MAX_EVALUATIONS in .env or remove the cap to continue."
             )
 
-    prompt_path = args.prompt or _ensure_prompt(project_root / "prompts", "working_prompt.md")
+    prompt_path = _resolve_prompt_path(project_root, args.prompt)
     output_path = args.output or (project_root / "artifacts" / "latest_eval.json")
 
     result = evaluate_prompt(

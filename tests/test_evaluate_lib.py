@@ -1,11 +1,26 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
 
-from autotone.evaluate_lib import build_redacted_eval
+from autotone.evaluate_lib import build_redacted_eval, _resolve_prompt_path
 
 
 class EvaluateLibTests(unittest.TestCase):
+    def test_resolve_prompt_path_bootstraps_missing_working_prompt(self) -> None:
+        root = Path(tempfile.mkdtemp(prefix="autotone-eval-test-"))
+        prompts_dir = root / "prompts"
+        prompts_dir.mkdir(parents=True, exist_ok=True)
+        default_prompt = prompts_dir / "default_prompt.md"
+        default_prompt.write_text("default prompt body", encoding="utf-8")
+
+        resolved = _resolve_prompt_path(root, Path("prompts/working_prompt.md"))
+
+        self.assertEqual(resolved, prompts_dir / "working_prompt.md")
+        self.assertTrue(resolved.exists())
+        self.assertEqual(resolved.read_text(encoding="utf-8"), "default prompt body")
+
     def test_build_redacted_eval_strips_raw_text_and_comments(self) -> None:
         result = {
             "prompt_path": "prompts/working_prompt.md",
