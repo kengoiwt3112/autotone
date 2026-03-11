@@ -122,24 +122,13 @@ def extract_features(text: str) -> dict[str, float]:
 
 
 def build_style_profile(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    by_platform: dict[str, list[dict[str, float]]] = {}
-    platforms = {row["platform"] for row in rows}
-    for platform in sorted(platforms):
-        texts = [row["reference_text"] for row in rows if row["platform"] == platform]
-        if texts:
-            by_platform[platform] = [extract_features(text) for text in texts]
-
-    global_texts = [row["reference_text"] for row in rows]
-    global_features = [extract_features(text) for text in global_texts]
-
-    return {
-        "global": _aggregate(global_features),
-        "platforms": {platform: _aggregate(features) for platform, features in by_platform.items()},
-    }
+    texts = [row["reference_text"] for row in rows]
+    features = [extract_features(text) for text in texts]
+    return {"global": _aggregate(features)}
 
 
-def profile_similarity(text: str, profile: dict[str, Any], platform: str) -> float:
-    target = profile["platforms"].get(platform) or profile["global"]
+def profile_similarity(text: str, profile: dict[str, Any]) -> float:
+    target = profile["global"]
     features = extract_features(text)
 
     scores: list[float] = []
@@ -169,47 +158,23 @@ def copy_penalty(text: str, references: list[str]) -> float:
     return clamp(max(ratios), 0.0, 1.0)
 
 
-def topic_overlap_score(topic: str, text: str) -> float:
-    topic_tokens = _coarse_tokens(topic)
-    text_tokens = set(_coarse_tokens(text))
-    if not topic_tokens:
-        return 0.5
-    hit = sum(1 for token in topic_tokens if token in text_tokens)
-    return clamp(hit / max(1, len(topic_tokens)), 0.0, 1.0)
-
-
-def platform_fit_score(platform: str, text: str, target_length: int) -> float:
-    length_score = exp_similarity(len(text) - target_length, max(20, target_length * 0.45))
-    newlines = text.count("\n")
-    # プラットフォーム別の改行上限（短文系は少なめ、メッセージ系は多め）
-    max_newlines = {"x": 2, "slack": 4, "discord": 4, "email": 8}
-    limit = max_newlines.get(platform, 4)
-    line_score = 1.0 if newlines <= limit else 0.7
-    return clamp(0.8 * length_score + 0.2 * line_score, 0.0, 1.0)
-
 
 def local_style_bundle(
     generated_text: str,
     reference_text: str,
     all_references: list[str],
     profile: dict[str, Any],
-    platform: str,
-    topic: str,
     target_length: int,
 ) -> dict[str, float]:
-    prof = profile_similarity(generated_text, profile, platform)
+    prof = profile_similarity(generated_text, profile)
     ref = reference_similarity(generated_text, reference_text)
     copy = copy_penalty(generated_text, all_references)
-    topic_score = topic_overlap_score(topic, generated_text)
-    platform_score = platform_fit_score(platform, generated_text, target_length)
     length_score = exp_similarity(len(generated_text) - target_length, max(20, target_length * 0.45))
 
     return {
         "profile_similarity": prof,
         "reference_similarity": ref,
         "copy_penalty": copy,
-        "topic_overlap": topic_score,
-        "platform_fit": platform_score,
         "length_score": clamp(length_score, 0.0, 1.0),
     }
 
@@ -239,18 +204,6 @@ def _std_floor(key: str) -> float:
         return 8.0
     return 1.0
 
-
-def _coarse_tokens(text: str) -> list[str]:
-    text = text.lower()
-    # Unicode word sequences (2+ chars) — covers Latin, Cyrillic, Arabic, Hangul, Kana, CJK, etc.
-    pieces = re.findall(r"\w{2,}", text, re.UNICODE)
-    seen: list[str] = []
-    used: set[str] = set()
-    for p in pieces:
-        if p not in used:
-            used.add(p)
-            seen.append(p)
-    return seen
 
 
 def _is_hiragana(ch: str) -> bool:

@@ -12,9 +12,8 @@ from .utils import read_text
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate one new post with the best prompt.")
     parser.add_argument("--topic", required=True, help="Topic hint")
-    parser.add_argument("--platform", default="x", choices=["x", "slack"])
     parser.add_argument("--prompt", type=Path, default=None, help="Optional prompt path")
-    parser.add_argument("--target-length", type=int, default=None)
+    parser.add_argument("--target-length", type=int, default=180)
     args = parser.parse_args()
 
     settings = load_settings()
@@ -24,9 +23,8 @@ def main() -> None:
     style_brief = read_text(project_root / "artifacts" / "style_brief.md")
 
     row = {
-        "platform": args.platform,
         "topic": args.topic,
-        "target_length": args.target_length or (140 if args.platform == "x" else 220),
+        "target_length": args.target_length,
     }
     rendered = render_prompt(prompt_template, style_brief, row)
 

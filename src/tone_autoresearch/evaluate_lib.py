@@ -19,7 +19,7 @@ from .utils import (
     write_text,
 )
 
-REQUIRED_PLACEHOLDERS = ["{{STYLE_BRIEF}}", "{{PLATFORM}}", "{{TOPIC}}", "{{TARGET_LENGTH}}"]
+REQUIRED_PLACEHOLDERS = ["{{STYLE_BRIEF}}", "{{TOPIC}}", "{{TARGET_LENGTH}}"]
 
 
 def main() -> None:
@@ -93,8 +93,6 @@ def evaluate_prompt(
             reference_text=row["reference_text"],
             all_references=all_references,
             profile=profile,
-            platform=row["platform"],
-            topic=row["topic"],
             target_length=row["target_length"],
         )
 
@@ -107,7 +105,6 @@ def evaluate_prompt(
         examples.append(
             {
                 "id": row["id"],
-                "platform": row["platform"],
                 "topic": row["topic"],
                 "target_length": row["target_length"],
                 "reference_text": row["reference_text"],
@@ -134,7 +131,6 @@ def render_prompt(prompt_template: str, style_brief: str, row: dict[str, Any]) -
     return (
         prompt_template
         .replace("{{STYLE_BRIEF}}", style_brief)
-        .replace("{{PLATFORM}}", row["platform"])
         .replace("{{TOPIC}}", row["topic"])
         .replace("{{TARGET_LENGTH}}", str(row["target_length"]))
     )
@@ -159,16 +155,12 @@ def judge_post(llm: LLMClient, model: str, row: dict[str, Any], generated_text: 
         "without copying it. Return JSON only."
     )
     user = (
-        f"Platform: {row['platform']}\n"
-        f"Topic hint: {row['topic']}\n\n"
         f"Reference post:\n{row['reference_text']}\n\n"
         f"Generated post:\n{generated_text}\n\n"
         "Return JSON with keys:\n"
         "{"
         '"style_similarity": 0-10, '
         '"same_author_likelihood": 0-10, '
-        '"topicality": 0-10, '
-        '"platform_fit": 0-10, '
         '"copy_risk": 0-10, '
         '"comment": "short comment"'
         "}\n"
@@ -183,8 +175,6 @@ def normalize_judge(data: dict[str, Any]) -> dict[str, Any]:
     return {
         "style_similarity": clamp(safe_float(data.get("style_similarity"), 0.0), 0.0, 10.0),
         "same_author_likelihood": clamp(safe_float(data.get("same_author_likelihood"), 0.0), 0.0, 10.0),
-        "topicality": clamp(safe_float(data.get("topicality"), 0.0), 0.0, 10.0),
-        "platform_fit": clamp(safe_float(data.get("platform_fit"), 0.0), 0.0, 10.0),
         "copy_risk": clamp(safe_float(data.get("copy_risk"), 0.0), 0.0, 10.0),
         "comment": str(data.get("comment", "")).strip(),
     }
@@ -193,14 +183,10 @@ def normalize_judge(data: dict[str, Any]) -> dict[str, Any]:
 def heuristic_judge(row: dict[str, Any], generated_text: str, local: dict[str, float]) -> dict[str, Any]:
     style = 10.0 * (0.55 * local["profile_similarity"] + 0.45 * local["reference_similarity"])
     same_author = 10.0 * (0.65 * local["profile_similarity"] + 0.35 * (1.0 - local["copy_penalty"]))
-    topicality = 10.0 * local["topic_overlap"]
-    platform_fit = 10.0 * local["platform_fit"]
     copy_risk = 10.0 * local["copy_penalty"]
     return {
         "style_similarity": round(style, 2),
         "same_author_likelihood": round(same_author, 2),
-        "topicality": round(topicality, 2),
-        "platform_fit": round(platform_fit, 2),
         "copy_risk": round(copy_risk, 2),
         "comment": "Heuristic fallback judge",
     }
@@ -228,16 +214,12 @@ def aggregate_metrics(examples: list[dict[str, Any]]) -> dict[str, float]:
     profile_scores = [ex["local_metrics"]["profile_similarity"] for ex in examples]
     ref_scores = [ex["local_metrics"]["reference_similarity"] for ex in examples]
     copy_penalties = [ex["local_metrics"]["copy_penalty"] for ex in examples]
-    topic_scores = [ex["local_metrics"]["topic_overlap"] for ex in examples]
-    platform_scores = [ex["local_metrics"]["platform_fit"] for ex in examples]
     judge_style = [ex["judge"]["style_similarity"] / 10.0 for ex in examples]
     judge_author = [ex["judge"]["same_author_likelihood"] / 10.0 for ex in examples]
     return {
         "profile_similarity": round(mean(profile_scores), 4),
         "reference_similarity": round(mean(ref_scores), 4),
         "copy_penalty": round(mean(copy_penalties), 4),
-        "topic_overlap": round(mean(topic_scores), 4),
-        "platform_fit": round(mean(platform_scores), 4),
         "judge_style_similarity": round(mean(judge_style), 4),
         "judge_same_author": round(mean(judge_author), 4),
     }
@@ -281,7 +263,6 @@ def format_example_block(ex: dict[str, Any]) -> list[str]:
     return [
         f"### {ex['id']} — score {ex['sample_score']*100:.1f}",
         "",
-        f"- platform: `{ex['platform']}`",
         f"- topic: {ex['topic']}",
         f"- judge comment: {ex['judge'].get('comment','')}",
         "",
@@ -298,15 +279,10 @@ def format_example_block(ex: dict[str, Any]) -> list[str]:
 
 def mock_generate(rendered_prompt: str, row: dict[str, Any]) -> str:
     topic = row["topic"]
-    platform = row["platform"]
     lang = row.get("language", "en")
     if lang == "ja":
-        if platform == "x":
-            return f"{topic}。派手さより、回るループの方が効く。"
-        return f"{topic}について共有です。結論だけ言うと、まずは小さく回してから広げるのが良さそうです。"
-    if platform == "x":
-        return f"{topic}. Small loops beat big rewrites."
-    return f"Quick update on {topic}. Start small, iterate, then scale."
+        return f"{topic}。派手さより、回るループの方が効く。"
+    return f"{topic}. Small loops beat big rewrites."
 
 
 def strip_outer_quotes(text: str) -> str:

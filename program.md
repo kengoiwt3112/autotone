@@ -30,7 +30,6 @@ Maximize the evaluator's `overall_score` on held-out examples so the generated t
 
 - Preserve all required placeholders:
   - `{{STYLE_BRIEF}}`
-  - `{{PLATFORM}}`
   - `{{TOPIC}}`
   - `{{TARGET_LENGTH}}`
 - Output must remain a single prompt template.

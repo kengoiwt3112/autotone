@@ -5,7 +5,7 @@ import textwrap
 from pathlib import Path
 from typing import Any
 
-from .data import default_input_path, load_raw_posts, save_dataset, stratified_split
+from .data import default_input_path, load_raw_posts, random_split, save_dataset
 from .llm import LLMClient
 from .metrics import build_style_profile, detect_language
 from .settings import load_settings
@@ -34,13 +34,12 @@ def main() -> None:
         topic = row.get("topic")
         if not topic:
             if settings.prep_model and not settings.mock_llm:
-                topic = infer_topic_with_llm(llm, settings.prep_model, row["text"], row["platform"])
+                topic = infer_topic_with_llm(llm, settings.prep_model, row["text"])
             else:
                 topic = infer_topic_heuristic(row["text"])
         normalized.append(
             {
                 "id": row["id"],
-                "platform": row["platform"],
                 "reference_text": row["text"],
                 "topic": topic,
                 "language": row.get("language") or detect_language(row["text"]),
@@ -48,7 +47,7 @@ def main() -> None:
             }
         )
 
-    train, validation = stratified_split(normalized, settings.train_ratio, settings.random_seed)
+    train, validation = random_split(normalized, settings.train_ratio, settings.random_seed)
     save_dataset(output_dir / "dataset.json", train, validation)
 
     profile = build_style_profile(train)
@@ -80,13 +79,12 @@ def infer_topic_heuristic(text: str) -> str:
     return first
 
 
-def infer_topic_with_llm(llm: LLMClient, model: str, text: str, platform: str) -> str:
+def infer_topic_with_llm(llm: LLMClient, model: str, text: str) -> str:
     system = (
         "You convert a personal post into a neutral topic hint for evaluation. "
         "Do not preserve the author's phrasing. Return only one short line."
     )
     user = (
-        f"Platform: {platform}\n"
         "Task: describe the main topic of this post in a neutral way.\n"
         "Keep it concise and reusable as a writing prompt.\n\n"
         f"POST:\n{text}"
@@ -98,10 +96,10 @@ def infer_topic_with_llm(llm: LLMClient, model: str, text: str, platform: str) -
 def summarize_style_with_llm(llm: LLMClient, model: str, train: list[dict[str, Any]]) -> str:
     example_block = []
     for row in train[:20]:
-        example_block.append(f"[{row['platform']}] {human_preview(row['reference_text'], 220)}")
+        example_block.append(human_preview(row['reference_text'], 220))
     system = (
         "You write a concise style brief for another model. "
-        "Focus on tone, rhythm, structure, punctuation, confidence, compression, and platform differences. "
+        "Focus on tone, rhythm, structure, punctuation, confidence, and compression. "
         "Do not copy signature phrases. Use bullet points."
     )
     user = "Author posts:\n" + "\n".join(f"- {line}" for line in example_block)
@@ -110,41 +108,29 @@ def summarize_style_with_llm(llm: LLMClient, model: str, train: list[dict[str, A
 
 
 def summarize_style_heuristic(train: list[dict[str, Any]]) -> str:
-    platforms = sorted({row["platform"] for row in train})
+    texts = [r["reference_text"] for r in train]
+    avg_len = int(sum(len(t) for t in texts) / max(1, len(texts)))
+    joined = "\n".join(texts)
 
-    def avg_len(rows: list[dict[str, Any]]) -> int:
-        if not rows:
-            return 0
-        return int(sum(len(r["reference_text"]) for r in rows) / len(rows))
-
-    def sample_traits(rows: list[dict[str, Any]]) -> list[str]:
-        texts = [r["reference_text"] for r in rows]
-        if not texts:
-            return ["no examples available"]
-        joined = "\n".join(texts)
-        traits = []
-        if "?" in joined or "？" in joined:
-            traits.append("sometimes uses rhetorical questions")
-        if "—" in joined or "(" in joined or "（" in joined:
-            traits.append("likes parenthetical / aside-like phrasing")
-        if any("\n" in t for t in texts):
-            traits.append("occasionally uses short line breaks")
-        if joined.count("!") + joined.count("！") == 0:
-            traits.append("rarely relies on exclamation marks")
-        if not traits:
-            traits.append("prefers direct statements over ornament")
-        return traits
+    traits = []
+    if "?" in joined or "？" in joined:
+        traits.append("sometimes uses rhetorical questions")
+    if "—" in joined or "(" in joined or "（" in joined:
+        traits.append("likes parenthetical / aside-like phrasing")
+    if any("\n" in t for t in texts):
+        traits.append("occasionally uses short line breaks")
+    if joined.count("!") + joined.count("！") == 0:
+        traits.append("rarely relies on exclamation marks")
+    if not traits:
+        traits.append("prefers direct statements over ornament")
 
     lines = [
         "- Overall voice: direct, compressed, and slightly skeptical rather than hype-driven.",
         "- Preference: concrete claims over generic inspiration.",
         "- Anti-pattern: avoid sounding like a generic assistant or marketing copy.",
+        f"- Average post length: around {avg_len} characters.",
+        f"- Traits: {'; '.join(traits)}.",
+        "- Preserve the author's level of confidence: decisive, but not absolute unless the source style strongly suggests it.",
+        "- Do not reuse distinctive phrases from the corpus verbatim.",
     ]
-    for platform in platforms:
-        rows = [row for row in train if row["platform"] == platform]
-        traits = "; ".join(sample_traits(rows))
-        lines.append(f"- {platform} style: usually around {avg_len(rows)} characters on average.")
-        lines.append(f"- {platform} traits: {traits}.")
-    lines.append("- Preserve the author's level of confidence: decisive, but not absolute unless the source style strongly suggests it.")
-    lines.append("- Do not reuse distinctive phrases from the corpus verbatim.")
     return "\n".join(lines)

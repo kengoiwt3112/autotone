@@ -11,7 +11,7 @@ Instead of training a model, this repo optimizes **one prompt file** so an LLM c
 
 ## What it does
 
-1. You prepare a small dataset of your own posts (`X`, `Slack`, etc.).
+1. You prepare a small dataset of your own posts.
 2. `prepare.py` builds:
    - a train/validation split
    - a style brief
@@ -38,7 +38,7 @@ This repo is designed to be safely published on GitHub:
 - your real posts live under `data/private/`
 - `.gitignore` excludes your real datasets, `.env`, generated artifacts, and run logs
 
-Do **not** commit private Slack content or personal exports into a public repository.
+Do **not** commit private content or personal exports into a public repository.
 
 ## Repository layout
 
@@ -124,14 +124,13 @@ data/private/raw_posts.jsonl
 Each line is JSON:
 
 ```json
-{"platform":"x","text":"Small posts go here.","topic":"what the post is about"}
-{"platform":"slack","text":"Longer internal message goes here.","topic":"project update on eval quality"}
+{"text":"Small posts go here.","topic":"what the post is about"}
+{"text":"Longer internal message goes here.","topic":"project update on eval quality"}
 ```
 
 Fields:
 
-- `platform`: `x` or `slack`
-- `text`: your original post/message
+- `text`: your original post
 - `topic`: optional but **recommended**. A neutral topic hint improves evaluation quality.
 
 If `topic` is missing, `prepare.py` will infer one heuristically, or with `PREP_MODEL` if configured.
@@ -176,18 +175,12 @@ Claude Code will read `program.md`, run the evaluation loop, edit `prompts/worki
 ### 9) Generate a fresh post
 
 ```bash
-uv run python generate.py --platform x --topic "why small evaluation loops beat big rewrites"
+uv run python generate.py --topic "why small evaluation loops beat big rewrites"
 ```
 
 ## Data tips
 
 For the first pass, use around **20–60 posts**.
-
-A good starting mix:
-
-- 10–20 X posts
-- 10–20 Slack messages
-- optionally split by separate corpora if your public tone and internal tone are very different
 
 Recommended:
 
@@ -224,7 +217,7 @@ uv run python evaluate.py --prompt prompts/working_prompt.md
 # (runs continuously, Ctrl-C to stop)
 
 # 5. generate a new post
-uv run python generate.py --platform x --topic "why evals should be productized earlier"
+uv run python generate.py --topic "why evals should be productized earlier"
 ```
 
 ## Notes
@@ -234,7 +227,7 @@ uv run python generate.py --platform x --topic "why evals should be productized 
 - The judge model matters a lot.
 - Local models are fine for cheap iteration, but a stronger judge usually gives better gradients for optimization.
 - **Reasoning models** (GPT-5, o-series, etc.) are supported. The LLM client automatically handles `max_completion_tokens` and `temperature` restrictions.
-- If your personal corpus is sensitive, keep `data/private/` out of version control and avoid uploading confidential Slack exports.
+- If your personal corpus is sensitive, keep `data/private/` out of version control.
 - **Claude Code agent design**: The optimization loop is driven by Claude Code itself, not by a Python script. See `CLAUDE.md` and `program.md` for details.
 
 ## License
