@@ -28,9 +28,9 @@ Instead of training a model, this repo optimizes **one prompt file** so an LLM c
 
 This is intentionally simple and small.
 
-## Why this works well on a MacBook M4
+## Why this works well on Apple Silicon Macs
 
-The original `karpathy/autoresearch` is built around a fixed budget, one mutable file (`train.py`), and a fixed metric. The macOS fork in `miolini/autoresearch-macos` keeps the same general autoresearch shape while adapting it to Apple Silicon / macOS. This repo reuses that **shape**, but swaps model training for **prompt optimization**, so it is much lighter to run on a Mac.
+The original `karpathy/autoresearch` is built around a fixed budget, one mutable file (`train.py`), and a fixed metric. The macOS fork in `miolini/autoresearch-macos` keeps the same general autoresearch shape while adapting it to Apple Silicon / macOS. This repo reuses that **shape**, but swaps model training for **prompt optimization**, so it runs comfortably on any Apple Silicon Mac (M1 and later).
 
 ## Public-safe by default
 
