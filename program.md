@@ -18,15 +18,11 @@ Maximize the evaluator's `overall_score` on held-out examples so the generated t
    - typical compression / expansion
    - punctuation habits
 
-2. **Platform fit**
-   - `x` should usually be tighter and more compressed
-   - `slack` can be slightly more contextual and operational
-
-3. **Generalization**
+2. **Generalization**
    - the prompt should work across unseen topics
    - do not optimize for one example only
 
-4. **Anti-copy behavior**
+3. **Anti-copy behavior**
    - the generated text should not reuse distinctive phrases
    - the prompt should encourage style transfer, not memorization
 
@@ -44,7 +40,6 @@ Maximize the evaluator's `overall_score` on held-out examples so the generated t
 ## Preferred optimization moves
 
 - tighten the instructions
-- improve platform-specific behavior
 - make the anti-copy rule explicit
 - clarify length control
 - make the writing feel more natural, less "LLM-ish"
@@ -55,8 +50,7 @@ Maximize the evaluator's `overall_score` on held-out examples so the generated t
 - overly rigid style rules that flatten the voice
 - direct mention of "imitating" or "copying" a specific person
 - adding lots of formatting constraints that do not help score
-- turning Slack outputs into essay-like prose
-- turning X outputs into slogan spam
+- turning outputs into essay-like prose or slogan spam
 
 ---
 

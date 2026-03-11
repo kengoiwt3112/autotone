@@ -20,10 +20,8 @@ Instead of training a model, this repo optimizes **one prompt file** so an LLM c
 4. The generated text is scored for:
    - style similarity
    - same-author feel
-   - platform fit (`x` vs `slack`)
-   - topicality
-   - copy risk / overfitting
    - local stylometric similarity
+   - copy risk / overfitting
 5. **Claude Code** reads `program.md`, edits `prompts/working_prompt.md`, evaluates, and keeps only improvements — acting as an autonomous optimization agent.
 
 This is intentionally simple and small.
@@ -206,7 +204,6 @@ The evaluator combines:
 - LLM judge scores (if configured)
 - local stylometric similarity
 - length / structure similarity
-- platform-fit checks
 - anti-copy penalty
 
 The goal is not to clone any one post, but to find a prompt that makes the model feel like **the same writer** across unseen topics.

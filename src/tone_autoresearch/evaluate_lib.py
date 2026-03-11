@@ -209,19 +209,14 @@ def heuristic_judge(row: dict[str, Any], generated_text: str, local: dict[str, f
 def combine_scores(local: dict[str, float], judge: dict[str, Any]) -> float:
     judge_style = judge["style_similarity"] / 10.0
     judge_author = judge["same_author_likelihood"] / 10.0
-    judge_topic = judge["topicality"] / 10.0
-    judge_platform = judge["platform_fit"] / 10.0
     judge_copy = judge["copy_risk"] / 10.0
 
     score = (
-        0.33 * judge_style
-        + 0.15 * judge_author
-        + 0.10 * judge_topic
-        + 0.10 * judge_platform
-        + 0.15 * local["profile_similarity"]
-        + 0.07 * local["reference_similarity"]
-        + 0.05 * local["length_score"]
-        + 0.05 * local["topic_overlap"]
+        0.40 * judge_style
+        + 0.20 * judge_author
+        + 0.20 * local["profile_similarity"]
+        + 0.10 * local["reference_similarity"]
+        + 0.10 * local["length_score"]
     )
     penalty = 0.25 * max(local["copy_penalty"], judge_copy)
     return clamp(score - penalty, 0.0, 1.0)
