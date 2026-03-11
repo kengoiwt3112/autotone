@@ -170,7 +170,7 @@ Outputs:
 Launch Claude Code in this directory and say:
 
 ```
-program.mdを見て実験を始めてください
+Have a look at program.md and kick off a new experiment. Start with the setup.
 ```
 
 Claude Code will read `program.md`, run the evaluation loop, edit `prompts/working_prompt.md`, and keep only improvements. The loop runs **continuously** with 5-minute experiment budgets until you stop it.
