@@ -10,8 +10,10 @@ from dotenv import load_dotenv
 @dataclass
 class Settings:
     project_root: Path
+    llm_provider: str
     openai_base_url: str
     openai_api_key: str
+    anthropic_api_key: str
     generator_model: str | None
     judge_model: str | None
     prep_model: str | None
@@ -20,7 +22,7 @@ class Settings:
     train_ratio: float
     disable_llm_cache: bool
     mock_llm: bool
-    max_experiments: int | None
+    max_evaluations: int | None
 
     @property
     def cache_dir(self) -> Path:
@@ -34,8 +36,10 @@ def load_settings(project_root: Path | None = None) -> Settings:
 
     return Settings(
         project_root=project_root,
+        llm_provider=os.getenv("LLM_PROVIDER", "openai"),
         openai_base_url=os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1"),
         openai_api_key=os.getenv("OPENAI_API_KEY", "ollama"),
+        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
         generator_model=_empty_to_none(os.getenv("GENERATOR_MODEL")),
         judge_model=_empty_to_none(os.getenv("JUDGE_MODEL")),
         prep_model=_empty_to_none(os.getenv("PREP_MODEL")),
@@ -44,7 +48,8 @@ def load_settings(project_root: Path | None = None) -> Settings:
         train_ratio=float(os.getenv("TRAIN_RATIO", "0.7")),
         disable_llm_cache=os.getenv("DISABLE_LLM_CACHE", "0") == "1",
         mock_llm=os.getenv("MOCK_LLM", "0") == "1",
-        max_experiments=_int_or_none(os.getenv("MAX_EXPERIMENTS")),
+        max_evaluations=_int_or_none(os.getenv("MAX_EVALUATIONS"))
+        or _int_or_none(os.getenv("MAX_EXPERIMENTS")),
     )
 
 

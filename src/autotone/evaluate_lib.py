@@ -63,14 +63,14 @@ def main() -> None:
     settings = load_settings()
     project_root = settings.project_root
 
-    # MAX_EXPERIMENTS のハードキャップ（experiments.jsonl の行数で判定）
-    if settings.max_experiments is not None:
+    # MAX_EVALUATIONS のハードキャップ（experiments.jsonl の行数で判定）
+    if settings.max_evaluations is not None:
         experiment_log = project_root / "runs" / "experiments.jsonl"
         done = _count_log_entries(experiment_log)
-        if done >= settings.max_experiments:
+        if done >= settings.max_evaluations:
             raise SystemExit(
-                f"HARD STOP: {done} evaluations completed (cap: {settings.max_experiments}). "
-                f"Increase MAX_EXPERIMENTS in .env or remove the cap to continue."
+                f"HARD STOP: {done} evaluations completed (cap: {settings.max_evaluations}). "
+                f"Increase MAX_EVALUATIONS in .env or remove the cap to continue."
             )
 
     prompt_path = args.prompt or _ensure_prompt(project_root / "prompts", "working_prompt.md")
@@ -82,11 +82,13 @@ def main() -> None:
         limit=args.limit,
         settings=settings,
     )
-    write_json(output_path, result)
+    write_json(output_path, build_redacted_eval(result))
 
-    # 人間向けレポート（生テキストを含むため --report 指定時のみ生成）
+    # 人間向けレポート / raw JSON（生テキストを含むため --report 指定時のみ生成）
     report_path = output_path.with_name("latest_report.md")
+    raw_output_path = output_path.with_name("latest_eval_raw.json")
     if args.report:
+        write_json(raw_output_path, result)
         write_text(report_path, build_markdown_report(result))
 
     # エージェント向け構造化入力（生テキストを含まない安全な形式）
@@ -112,6 +114,7 @@ def main() -> None:
     print(f"Score: {result['overall_score']:.2f}")
     print(f"Wrote: {output_path}")
     if args.report:
+        print(f"Wrote: {raw_output_path}")
         print(f"Wrote: {report_path}")
     print(f"Wrote: {agent_input_path}")
     print(f"Wrote: {experiment_log}")
@@ -300,6 +303,34 @@ def aggregate_metrics(examples: list[dict[str, Any]]) -> dict[str, float]:
         "judge_same_author": round(mean(judge_author), 4),
         "judge_topic_fidelity": round(mean(judge_topic), 4),
     }
+
+
+def build_redacted_eval(result: dict[str, Any]) -> dict[str, Any]:
+    redacted_examples = []
+    for ex in result.get("examples", []):
+        redacted_examples.append(
+            {
+                "id": ex["id"],
+                "topic": ex["topic"],
+                "target_length": ex["target_length"],
+                "generated_length": len(ex.get("generated_text", "")),
+                "local_metrics": ex["local_metrics"],
+                "judge": {k: v for k, v in ex["judge"].items() if k != "comment"},
+                "sample_score": ex["sample_score"],
+            }
+        )
+
+    redacted = {
+        "prompt_path": result.get("prompt_path", ""),
+        "split": result.get("split", "validation"),
+        "example_count": result.get("example_count", 0),
+        "overall_score": result.get("overall_score", 0.0),
+        "aggregate_metrics": result.get("aggregate_metrics", {}),
+        "examples": redacted_examples,
+    }
+    if "error" in result:
+        redacted["error"] = result["error"]
+    return redacted
 
 
 def build_markdown_report(result: dict[str, Any]) -> str:

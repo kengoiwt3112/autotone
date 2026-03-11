@@ -140,7 +140,10 @@ def infer_topic_with_llm(llm: LLMClient, model: str, text: str) -> str:
         f"POST:\n{text}"
     )
     topic = llm.chat(model=model, system=system, user=user, temperature=0.0, max_tokens=2000).strip()
-    return topic.splitlines()[0].strip() or infer_topic_heuristic(text)
+    if not topic:
+        return infer_topic_heuristic(text)
+    first_line = topic.splitlines()[0].strip()
+    return first_line or infer_topic_heuristic(text)
 
 
 def summarize_style_with_llm(llm: LLMClient, model: str, train: list[dict[str, Any]]) -> str:
