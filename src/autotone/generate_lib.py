@@ -9,6 +9,19 @@ from .settings import load_settings
 from .utils import read_text
 
 
+def _ensure_prompt(prompts_dir: Path, filename: str) -> Path:
+    """working/best が無ければ default_prompt.md からコピーして返す。"""
+    import shutil
+
+    target = prompts_dir / filename
+    if not target.exists():
+        default = prompts_dir / "default_prompt.md"
+        if not default.exists():
+            raise SystemExit(f"Neither {target} nor {default} found.")
+        shutil.copy2(default, target)
+    return target
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate one new post with the best prompt.")
     parser.add_argument("--topic", required=True, help="Topic hint")
@@ -18,7 +31,7 @@ def main() -> None:
 
     settings = load_settings()
     project_root = settings.project_root
-    prompt_path = args.prompt or (project_root / "prompts" / "best_prompt.md")
+    prompt_path = args.prompt or _ensure_prompt(project_root / "prompts", "best_prompt.md")
     prompt_template = read_text(prompt_path)
     style_brief = read_text(project_root / "artifacts" / "style_brief.md")
 

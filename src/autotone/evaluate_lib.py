@@ -22,6 +22,19 @@ from .utils import (
 REQUIRED_PLACEHOLDERS = ["{{STYLE_BRIEF}}", "{{TOPIC}}", "{{TARGET_LENGTH}}"]
 
 
+def _ensure_prompt(prompts_dir: Path, filename: str) -> Path:
+    """working/best が無ければ default_prompt.md からコピーして返す。"""
+    import shutil
+
+    target = prompts_dir / filename
+    if not target.exists():
+        default = prompts_dir / "default_prompt.md"
+        if not default.exists():
+            raise SystemExit(f"Neither {target} nor {default} found.")
+        shutil.copy2(default, target)
+    return target
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate a prompt against held-out examples.")
     parser.add_argument("--prompt", type=Path, default=None, help="Path to prompt template")
@@ -32,7 +45,7 @@ def main() -> None:
 
     settings = load_settings()
     project_root = settings.project_root
-    prompt_path = args.prompt or (project_root / "prompts" / "working_prompt.md")
+    prompt_path = args.prompt or _ensure_prompt(project_root / "prompts", "working_prompt.md")
     output_path = args.output or (project_root / "artifacts" / "latest_eval.json")
 
     result = evaluate_prompt(

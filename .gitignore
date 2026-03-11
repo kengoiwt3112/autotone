@@ -17,6 +17,9 @@ data/private/*.jsonl
 
 *.log
 
+prompts/working_prompt.md
+prompts/best_prompt.md
+
 # editor / tool configs
 CLAUDE.md
 .claude/

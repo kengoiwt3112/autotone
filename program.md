@@ -59,7 +59,7 @@ Claude Code follows these steps as an autonomous agent.
 
 ### Step 1: Baseline
 
-1. Copy `prompts/best_prompt.md` → `prompts/working_prompt.md`
+1. Copy `prompts/best_prompt.md` → `prompts/working_prompt.md` (if neither exists, `default_prompt.md` is auto-copied)
 2. Run evaluation:
    ```bash
    uv run python evaluate.py --prompt prompts/working_prompt.md

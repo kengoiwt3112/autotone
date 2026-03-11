@@ -8,7 +8,8 @@ The repo is deliberately kept small and only really has four files that matter:
 
 - **`prepare.py`** — one-time data prep (splits your posts into train/validation, builds a style profile, infers topics). Not modified.
 - **`evaluate.py`** — the fixed evaluator. Generates text from the prompt, scores it against your real writing style using LLM judges and local stylometrics. Not modified.
-- **`prompts/working_prompt.md`** — the single file the agent edits. Contains the full system prompt that tells the LLM how to write like you. **This file is edited and iterated on by the agent.**
+- **`prompts/default_prompt.md`** — the starter template shipped with the repo. Auto-copied to `working_prompt.md` on first run. Not modified after that.
+- **`prompts/working_prompt.md`** — the single file the agent edits. Contains the full system prompt that tells the LLM how to write like you. **This file is edited and iterated on by the agent.** (gitignored)
 - **`program.md`** — instructions for the agent. Point Claude Code here and let it go. **This file is edited and iterated on by the human.**
 
 By design, each experiment runs for a **fixed 5-minute time budget**. The metric is **overall_score** — higher is better. It combines LLM judge assessments (style similarity, same-author likelihood) with local stylometric features (punctuation patterns, rhythm, compression) and an anti-copy penalty to prevent memorization.
@@ -60,8 +61,9 @@ The agent then autonomously iterates — editing the prompt, evaluating, keeping
 prepare.py                  — data prep + style profiling (do not modify)
 evaluate.py                 — evaluator + scoring (do not modify)
 generate.py                 — generate a post from the optimized prompt
-prompts/working_prompt.md   — system prompt (agent modifies this)
-prompts/best_prompt.md      — best prompt so far (auto-updated)
+prompts/default_prompt.md   — starter prompt template (shipped with repo)
+prompts/working_prompt.md   — system prompt (agent modifies this, gitignored)
+prompts/best_prompt.md      — best prompt so far (auto-updated, gitignored)
 program.md                  — agent instructions
 src/autotone/               — library code (do not modify)
 data/private/raw_posts.jsonl — your writing samples (gitignored)
