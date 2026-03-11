@@ -109,6 +109,10 @@ A candidate prompt is only accepted if it improves the measured score.
 
 Use `date +%s` at the start of each experiment and before each new round to check elapsed time. Each experiment has a **5-minute (300 second) wall-clock budget**.
 
+## NEVER STOP
+
+Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped. You are autonomous. If you run out of ideas, think harder — re-read the latest report for new angles, try combining previous near-misses, try more radical prompt rewrites, revisit dimensions you haven't targeted yet. The loop runs until the human interrupts you, period.
+
 ## Human note
 
 Edit this file if you want the optimization loop to chase a different notion of voice.
