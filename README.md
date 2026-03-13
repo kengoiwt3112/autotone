@@ -2,7 +2,6 @@
 
 [日本語版 README](README.ja.md)
 
-An AI agent runs for 24+ hours, iterating through 200+ experiments to tune a prompt that reproduces your writing style. Inspired by [@karpathy/autoresearch](https://github.com/karpathy/autoresearch) — same loop, applied to prompt optimization.
 
 <p align="center">
   <img src="assets/score_history.png" alt="Score history over 200+ evaluations" width="800">
@@ -10,6 +9,9 @@ An AI agent runs for 24+ hours, iterating through 200+ experiments to tune a pro
 <p align="center">
   <img src="assets/agent_running.png" alt="Claude Code agent running for over 24 hours" width="480">
 </p>
+
+An AI agent runs for 24+ hours, iterating through 200+ experiments to tune a prompt that reproduces your writing style. Inspired by [@karpathy/autoresearch](https://github.com/karpathy/autoresearch) — same loop, applied to prompt optimization.
+
 
 ## How it works
 
