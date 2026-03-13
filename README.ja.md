@@ -6,7 +6,7 @@
 <p align="center">
   <img src="assets/score_history.png" alt="200回以上の評価によるスコア推移" width="800">
 </p>
-AIエージェントが24時間以上稼働し、200回以上の実験を繰り返して、あなたの文体を再現するプロンプトにチューニングします。[\@karpathy/autoresearch](https://github.com/karpathy/autoresearch) と同じループを、プロンプト最適化に応用したものです。
+AIエージェントが24時間以上稼働し、200回以上の実験を繰り返して、あなたの文体を再現するプロンプトにチューニングします。[&#64;karpathy/autoresearch](https://github.com/karpathy/autoresearch) と同じループを、プロンプト最適化に応用したものです。
 
 ## 仕組み
 
@@ -161,7 +161,7 @@ PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 
 ## 謝辞
 
-このプロジェクトは [\@karpathy/autoresearch](https://github.com/karpathy/autoresearch) に強く影響を受けています。元ネタでは AI agent が `train.py` を一晩かけて改善し、[miolini/autoresearch-macos](https://github.com/miolini/autoresearch-macos) はそれを Apple Silicon 向けに調整しています。このリポジトリでは、その shape（single mutable target、fixed evaluator、keep/revert cycle）を保ったまま、モデル学習の代わりに prompt optimization へ置き換えています。
+このプロジェクトは [&#64;karpathy/autoresearch](https://github.com/karpathy/autoresearch) に強く影響を受けています。元ネタでは AI agent が `train.py` を一晩かけて改善し、[miolini/autoresearch-macos](https://github.com/miolini/autoresearch-macos) はそれを Apple Silicon 向けに調整しています。このリポジトリでは、その shape（single mutable target、fixed evaluator、keep/revert cycle）を保ったまま、モデル学習の代わりに prompt optimization へ置き換えています。
 
 ## License
 

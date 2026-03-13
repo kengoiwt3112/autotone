@@ -6,7 +6,7 @@
 <p align="center">
   <img src="assets/score_history.png" alt="Score history over 200+ evaluations" width="800">
 </p>
-An AI agent runs for 24+ hours, iterating through 200+ experiments to tune a prompt that reproduces your writing style. Inspired by [\@karpathy/autoresearch](https://github.com/karpathy/autoresearch) — same loop, applied to prompt optimization.
+An AI agent runs for 24+ hours, iterating through 200+ experiments to tune a prompt that reproduces your writing style. Inspired by [&#64;karpathy/autoresearch](https://github.com/karpathy/autoresearch) — same loop, applied to prompt optimization.
 
 
 ## How it works
@@ -161,7 +161,7 @@ PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 
 ## Acknowledgments
 
-This project is directly inspired by [\@karpathy/autoresearch](https://github.com/karpathy/autoresearch) — an AI agent autonomously improves `train.py` overnight, and [miolini/autoresearch-macos](https://github.com/miolini/autoresearch-macos) — the same idea adapted for Apple Silicon. This repo applies the same shape (single mutable target, fixed evaluator, keep/revert cycle) but swaps model training for prompt optimization.
+This project is directly inspired by [&#64;karpathy/autoresearch](https://github.com/karpathy/autoresearch) — an AI agent autonomously improves `train.py` overnight, and [miolini/autoresearch-macos](https://github.com/miolini/autoresearch-macos) — the same idea adapted for Apple Silicon. This repo applies the same shape (single mutable target, fixed evaluator, keep/revert cycle) but swaps model training for prompt optimization.
 
 ## License
 
