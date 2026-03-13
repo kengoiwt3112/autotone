@@ -2,7 +2,14 @@
 
 [English README](README.md)
 
-自分の文章コーパスを AI エージェントに渡し、一晩かけて改善実験を回させるためのリポジトリです。エージェントはプロンプトを少しずつ調整し、自分らしい文体で文章を生成し、どれだけ近いかを評価しながら、良ければ採用し、悪ければ戻すことを繰り返します。これは [@karpathy/autoresearch](https://github.com/karpathy/autoresearch) の考え方を、**モデル学習** ではなく **プロンプト最適化** に応用したものです。
+AIエージェントが24時間以上稼働し、200回以上の実験を繰り返して、あなたの文体を再現するプロンプトにチューニングします。[@karpathy/autoresearch](https://github.com/karpathy/autoresearch) と同じループを、プロンプト最適化に応用したものです。
+
+<p align="center">
+  <img src="assets/score_history.png" alt="200回以上の評価によるスコア推移" width="800">
+</p>
+<p align="center">
+  <img src="assets/agent_running.png" alt="24時間以上稼働するClaude Codeエージェント" width="480">
+</p>
 
 ## 仕組み
 
@@ -12,7 +19,7 @@
 - **`evaluate.py`** — 固定の evaluator。現在のプロンプトで文章を生成し、LLM judge とローカル特徴量であなたの文体にどれだけ近いかを採点します。通常は変更しません。
 - **`prompts/default_prompt.md`** — リポジトリ同梱の初期テンプレート。初回実行時に `working_prompt.md` へ自動コピーされます。その後は変更しません。
 - **`prompts/working_prompt.md`** — エージェントが編集する唯一のファイル。LLM に「あなたらしく書く」方法を指示するシステムプロンプト本体です。**エージェントはこのファイルだけを更新します。**（gitignore 対象）
-- **`program.md`** — エージェント向けの運用指示。Claude Code や Codex にこれを読ませて実行させる想定です。**人間が改善していくファイルです。**
+- **`program.md`** — エージェント向けの運用指示。Claude Code にこれを読ませて実行させる想定です。**人間が改善していくファイルです。**
 
 各 experiment は **5 分固定** の予算で動きます。評価指標は **`overall_score`** です。これは LLM judge の評価（文体の近さ、同じ著者らしさ、トピックへの忠実度）に、句読点やリズムなどのローカルな特徴量と、丸写しを防ぐための penalty を組み合わせたものです。
 
@@ -52,7 +59,7 @@ API を使わない簡易確認モード: `MOCK_LLM=1`
 
 ## エージェントの実行
 
-このリポジトリを Claude Code または Codex で開き、たとえば次のように指示します。
+このリポジトリを Claude Code で開き、たとえば次のように指示します。
 
 ```
 Have a look at program.md and kick off a new experiment. Start with the setup.

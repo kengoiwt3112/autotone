@@ -2,7 +2,14 @@
 
 [日本語版 README](README.ja.md)
 
-The idea: give an AI agent a writing style corpus and let it experiment overnight. It modifies the prompt, generates text in your voice, checks if the result matches your tone, keeps or discards, and repeats. You wake up in the morning to a log of experiments and (hopefully) a prompt that writes like you. This is [@karpathy/autoresearch](https://github.com/karpathy/autoresearch) applied to **prompt optimization** instead of model training — same shape, different domain.
+An AI agent runs for 24+ hours, iterating through 200+ experiments to tune a prompt that reproduces your writing style. Inspired by [@karpathy/autoresearch](https://github.com/karpathy/autoresearch) — same loop, applied to prompt optimization.
+
+<p align="center">
+  <img src="assets/score_history.png" alt="Score history over 200+ evaluations" width="800">
+</p>
+<p align="center">
+  <img src="assets/agent_running.png" alt="Claude Code agent running for over 24 hours" width="480">
+</p>
 
 ## How it works
 
@@ -12,7 +19,7 @@ The repo is deliberately kept small and only really has four files that matter:
 - **`evaluate.py`** — the fixed evaluator. Generates text from the prompt, scores it against your real writing style using LLM judges and local stylometrics. Not modified.
 - **`prompts/default_prompt.md`** — the starter template shipped with the repo. Auto-copied to `working_prompt.md` on first run. Not modified after that.
 - **`prompts/working_prompt.md`** — the single file the agent edits. Contains the full system prompt that tells the LLM how to write like you. **This file is edited and iterated on by the agent.** (gitignored)
-- **`program.md`** — instructions for the agent. Point Claude Code or Codex here and let it go. **This file is edited and iterated on by the human.**
+- **`program.md`** — instructions for the agent. Point Claude Code here and let it go. **This file is edited and iterated on by the human.**
 
 By design, each experiment runs for a **fixed 5-minute time budget**. The metric is **overall_score** — higher is better. It combines LLM judge assessments (style similarity, same-author likelihood, topic fidelity) with local stylometric features (punctuation patterns, rhythm, compression) and an anti-copy penalty to prevent memorization.
 
@@ -52,7 +59,7 @@ Smoke-test mode (no API needed): `MOCK_LLM=1`
 
 ## Running the agent
 
-Simply spin up Claude Code or Codex in this repo, then prompt something like:
+Simply spin up Claude Code in this repo, then prompt something like:
 
 ```
 Have a look at program.md and kick off a new experiment. Start with the setup.
@@ -60,7 +67,7 @@ Have a look at program.md and kick off a new experiment. Start with the setup.
 
 The agent then autonomously iterates — editing the prompt, evaluating, keeping improvements — in 5-minute experiment cycles until you stop it.
 
-The intended workflow is the same for either tool:
+The intended workflow is:
 
 - Read `program.md`
 - Read `artifacts/latest_agent_input.json`
