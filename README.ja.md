@@ -6,7 +6,7 @@
 <p align="center">
   <img src="assets/score_history.png" alt="200回以上の評価によるスコア推移" width="800">
 </p>
-AIエージェントが24時間以上稼働し、200回以上の実験を繰り返して、あなたの文体を再現するプロンプトにチューニングします。[@karpathy/autoresearch](https://github.com/karpathy/autoresearch) と同じループを、プロンプト最適化に応用したものです。
+AIエージェントが24時間以上稼働し、200回以上の実験を繰り返して、あなたの文体を再現するプロンプトにチューニングします。[karpathy/autoresearch](https://github.com/karpathy/autoresearch) と同じループを、プロンプト最適化に応用したものです。
 
 ## 仕組み
 
